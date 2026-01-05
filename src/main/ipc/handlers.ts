@@ -226,9 +226,21 @@ export function registerIpcHandlers() {
     return discoveryService.getPipelineSummary();
   });
 
-  // Discovery: Set database path
-  ipcMain.handle(IPC_CHANNELS.DISCOVERY.SET_DATABASE_PATH, async (_, path: string) => {
-    discoveryService.setDatabasePath(path);
+  // Discovery: Set database path (with .parade/ fallback support)
+  ipcMain.handle(IPC_CHANNELS.DISCOVERY.SET_DATABASE_PATH, async (_, inputPath: string) => {
+    // If path ends with discovery.db, resolve to correct location
+    let dbPath = inputPath;
+    if (inputPath.endsWith('discovery.db')) {
+      // Extract project path from the db path
+      const projectPath = inputPath.replace(/\/?\.parade\/discovery\.db$/, '').replace(/\/?discovery\.db$/, '');
+      const paradeDbPath = path.join(projectPath, '.parade', 'discovery.db');
+      const legacyDbPath = path.join(projectPath, 'discovery.db');
+      dbPath = fs.existsSync(paradeDbPath) ? paradeDbPath :
+               fs.existsSync(legacyDbPath) ? legacyDbPath : paradeDbPath;
+      console.log('Discovery path resolved:', inputPath, '->', dbPath);
+    }
+    discoveryService.setDatabasePath(dbPath);
+    telemetryService.setDatabasePath(dbPath);
   });
 
   // Discovery: Get database path

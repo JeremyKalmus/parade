@@ -453,7 +453,8 @@ export default function App() {
         const activeProject = projects.find((p: { isActive?: boolean }) => p.isActive) ?? projects[0];
 
         if (activeProject) {
-          const discoveryDbPath = `${activeProject.path}/discovery.db`;
+          // Use .parade/discovery.db path - main process handles fallback to legacy location
+          const discoveryDbPath = `${activeProject.path}/.parade/discovery.db`;
           await discoveryClient.setDatabasePath(discoveryDbPath);
           console.log('App initialized with project:', activeProject.name);
         }
