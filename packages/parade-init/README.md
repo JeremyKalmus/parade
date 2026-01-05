@@ -52,15 +52,46 @@ After running `parade-init`:
 3. Run `/parade-doctor` to verify setup
 4. Start building with `/discover`
 
-## Visual Dashboard (Optional)
+## Visual Dashboard (Parade App)
 
-The Parade app provides a visual Kanban board:
+The Parade app provides a visual Kanban board for tracking your workflow.
+
+### Option 1: Download Pre-built App (Recommended)
+
+1. Download the latest DMG from [GitHub Releases](https://github.com/JeremyKalmus/parade/releases)
+2. Open the DMG and drag Parade to Applications
+3. **Important for macOS users**: The app is not yet notarized with Apple. You'll need to run:
+   ```bash
+   xattr -cr /Applications/Parade.app
+   ```
+4. Open Parade - on first launch, you'll be prompted to add your project folder
+5. Click "Add Project Folder" and select your project directory (where you ran `parade-init`)
+
+### Option 2: Build from Source
+
+```bash
+git clone https://github.com/JeremyKalmus/parade.git ~/parade
+cd ~/parade && npm install
+npm run build
+```
+
+The built app will be in `release/Parade-*.dmg`
+
+### Option 3: Development Mode
 
 ```bash
 git clone https://github.com/JeremyKalmus/parade.git ~/parade
 cd ~/parade && npm install
 npm run dev
 ```
+
+### First Launch
+
+When you first open the Parade app:
+1. You'll be taken to the Settings page automatically
+2. Click "Add Project Folder" to add your project
+3. Select a folder that contains a `.beads` directory (where you ran `bd init`)
+4. Your project will appear in the sidebar
 
 ## Skills Included
 
@@ -74,6 +105,32 @@ npm run dev
 | `/evolve` | Capture new patterns for reuse |
 | `/parade-doctor` | Diagnose setup issues |
 | `/workflow-status` | Check current workflow state |
+
+## Troubleshooting
+
+### macOS: "Parade.app is damaged and can't be opened"
+
+This happens because the app is not yet notarized with Apple. Run:
+
+```bash
+xattr -cr /Applications/Parade.app
+```
+
+### App shows "Error loading issues" or "spawn bd ENOENT"
+
+The app can't find the `bd` CLI. Make sure beads is installed:
+
+```bash
+go install github.com/beads-ai/beads-cli/cmd/bd@latest
+```
+
+And that `bd` is in your PATH. The app checks common locations like `/opt/homebrew/bin/bd` and `/usr/local/bin/bd`.
+
+### No projects showing in the app
+
+1. Make sure you've run `bd init` in your project
+2. Add the project folder in Settings (click "Add Project Folder")
+3. Select the folder that contains the `.beads` directory
 
 ## License
 

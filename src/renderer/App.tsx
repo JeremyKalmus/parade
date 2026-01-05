@@ -183,9 +183,32 @@ function SettingsView() {
     );
   }
 
+  // Check if this is first launch (no projects)
+  const isFirstLaunch = projects.length === 0;
+
   return (
     <div className="p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6 text-slate-100">Settings</h1>
+      {/* Welcome message for first launch */}
+      {isFirstLaunch && (
+        <div className="mb-8 p-6 rounded-xl bg-gradient-to-br from-sky-900/30 to-indigo-900/30 border border-sky-700/30">
+          <h1 className="text-2xl font-bold text-slate-100 mb-2">Welcome to Parade! 🎉</h1>
+          <p className="text-slate-300 mb-4">
+            Parade is a workflow orchestrator for Claude Code. Get started by adding your first project below.
+          </p>
+          <div className="text-sm text-slate-400 space-y-2">
+            <p><strong>Prerequisites:</strong></p>
+            <ol className="list-decimal list-inside space-y-1 ml-2">
+              <li>Install the beads CLI: <code className="bg-slate-800 px-1 rounded text-slate-300">go install github.com/beads-ai/beads-cli/cmd/bd@latest</code></li>
+              <li>Initialize beads in your project: <code className="bg-slate-800 px-1 rounded text-slate-300">cd your-project && bd init</code></li>
+              <li>Add the project folder below</li>
+            </ol>
+          </div>
+        </div>
+      )}
+
+      <h1 className="text-2xl font-bold mb-6 text-slate-100">
+        {isFirstLaunch ? 'Add Your First Project' : 'Settings'}
+      </h1>
 
       {/* Error message */}
       {error && (
@@ -197,9 +220,11 @@ function SettingsView() {
       <div className="space-y-8">
         {/* Projects Section */}
         <div>
-          <Label className="text-slate-200 text-lg font-semibold">
-            Projects
-          </Label>
+          {!isFirstLaunch && (
+            <Label className="text-slate-200 text-lg font-semibold">
+              Projects
+            </Label>
+          )}
           <p className="text-sm text-slate-400 mt-1 mb-4">
             Add projects that contain a <code className="bg-slate-800 px-1 rounded text-slate-300">.beads</code> folder (where you ran <code className="bg-slate-800 px-1 rounded text-slate-300">bd init</code>)
           </p>
@@ -436,6 +461,7 @@ function KanbanView() {
 // Main App component
 export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isFirstLaunch, setIsFirstLaunch] = useState(false);
   const { projects, activeProjectId, setActiveProject, isSwitchingProject } = useBeadsStore();
 
   // Initialize stores on app startup - runs only once
@@ -452,7 +478,12 @@ export default function App() {
         const projects = settings?.projects ?? [];
         const activeProject = projects.find((p: { isActive?: boolean }) => p.isActive) ?? projects[0];
 
-        if (activeProject) {
+        // Check if this is first launch (no projects configured)
+        if (!projects || projects.length === 0) {
+          if (mounted) {
+            setIsFirstLaunch(true);
+          }
+        } else if (activeProject) {
           // Use .parade/discovery.db path - main process handles fallback to legacy location
           const discoveryDbPath = `${activeProject.path}/.parade/discovery.db`;
           await discoveryClient.setDatabasePath(discoveryDbPath);
@@ -481,6 +512,10 @@ export default function App() {
       </div>
     );
   }
+
+  // Redirect to settings on first launch (no projects configured)
+  // This is checked after initialization and will redirect once
+  const defaultRoute = isFirstLaunch || projects.length === 0 ? '/settings' : '/pipeline';
 
   return (
     <div className="flex h-screen bg-slate-950">
@@ -601,7 +636,7 @@ export default function App() {
           </div>
         )}
         <Routes>
-          <Route path="/" element={<Navigate to="/pipeline" replace />} />
+          <Route path="/" element={<Navigate to={defaultRoute} replace />} />
           <Route path="/pipeline" element={<PipelineView />} />
           <Route path="/briefs" element={<BriefsView />} />
           <Route path="/kanban" element={<KanbanView />} />
