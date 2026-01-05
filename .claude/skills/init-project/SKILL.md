@@ -728,7 +728,7 @@ No problem! Here's what you can do next:
 The Parade app provides a visual Kanban board for tracking briefs, epics, and tasks.
 
 To install (one-time setup):
-   git clone https://github.com/anthropics/parade.git ~/parade
+   git clone https://github.com/JeremyKalmus/parade.git ~/parade
    cd ~/parade && npm install
 
 To run:

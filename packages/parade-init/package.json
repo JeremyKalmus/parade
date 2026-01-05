@@ -1,7 +1,7 @@
 {
   "name": "parade-init",
   "version": "1.0.0",
-  "description": "CLI tool to initialize new Parade workflow orchestrator projects",
+  "description": "CLI tool to initialize new Parade workflow orchestrator projects for Claude Code",
   "main": "./lib/index.js",
   "bin": {
     "parade-init": "./bin/parade-init.js"
@@ -19,15 +19,23 @@
     "workflow",
     "orchestrator",
     "beads",
-    "cli"
+    "cli",
+    "claude",
+    "claude-code",
+    "ai",
+    "development"
   ],
-  "author": "Parade Team",
+  "author": "Jeremy Kalmus",
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/parade"
+    "url": "git+https://github.com/JeremyKalmus/parade.git"
+  },
+  "homepage": "https://github.com/JeremyKalmus/parade#readme",
+  "bugs": {
+    "url": "https://github.com/JeremyKalmus/parade/issues"
   }
 }

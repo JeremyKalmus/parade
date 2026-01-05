@@ -70,7 +70,7 @@ You're ready to use `/discover`, `/approve-spec`, `/run-tasks`, etc.
 
 ```bash
 # Clone the Parade repository (one-time setup)
-git clone https://github.com/anthropics/parade.git ~/parade
+git clone https://github.com/JeremyKalmus/parade.git ~/parade
 cd ~/parade
 npm install
 ```

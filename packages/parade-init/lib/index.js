@@ -112,7 +112,7 @@ async function main() {
     console.log('   The Parade app provides a visual Kanban board for tracking');
     console.log('   your workflow. To install:\n');
     console.log('   # Clone the Parade repository');
-    console.log('   git clone https://github.com/anthropics/parade.git ~/parade');
+    console.log('   git clone https://github.com/JeremyKalmus/parade.git ~/parade');
     console.log('   cd ~/parade && npm install\n');
     console.log('   # Run the app');
     console.log('   npm run dev\n');

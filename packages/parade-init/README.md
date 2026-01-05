@@ -1,6 +1,14 @@
 # parade-init
 
-CLI tool to initialize new Parade workflow orchestrator projects.
+CLI tool to initialize new [Parade](https://github.com/JeremyKalmus/parade) workflow orchestrator projects for Claude Code.
+
+## What is Parade?
+
+Parade is a workflow orchestration system for Claude Code that helps you:
+- Transform feature ideas into detailed specifications
+- Break down work into trackable tasks
+- Execute implementation via specialized sub-agents
+- Track progress visually with a Kanban board
 
 ## Installation
 
@@ -8,51 +16,64 @@ CLI tool to initialize new Parade workflow orchestrator projects.
 npx parade-init
 ```
 
-## What it does
-
-The `parade-init` package handles infrastructure setup for new Parade projects:
-
-1. **Checks for beads CLI** - Verifies if the beads task management CLI is installed
-2. **Installs beads** - Downloads and installs beads from GitHub releases if needed
-3. **Scaffolds directories** - Creates `.beads/`, `.claude/`, and `.design/` structure
-
-After running `parade-init`, use the Claude Code `/init-project` skill to configure your project settings.
-
-## Project Structure
-
-```
-packages/parade-init/
-├── package.json           # npm package configuration
-├── bin/
-│   └── parade-init.js     # CLI entry point
-├── lib/
-│   ├── index.js           # Main orchestration
-│   ├── installer.js       # Beads CLI installation
-│   └── scaffolder.js      # Directory scaffolding
-├── templates/             # Template files for new projects
-└── README.md
-```
-
-## Development
+Or install globally:
 
 ```bash
-# Link for local testing
-npm link
-
-# Run locally
+npm install -g parade-init
 parade-init
-
-# Unlink
-npm unlink -g parade-init
 ```
 
-## Implementation Status
+## What it creates
 
-- [x] Package scaffold (task customTaskTracker-ym7.1)
-- [ ] Beads installer (task customTaskTracker-ym7.2)
-- [ ] Directory scaffolder (task customTaskTracker-ym7.3)
-- [ ] Template files (task customTaskTracker-ym7.4)
-- [ ] Integration testing (task customTaskTracker-ym7.5)
+Running `parade-init` in your project directory creates:
+
+```
+your-project/
+├── .parade/           # Workflow data (discovery.db)
+├── .claude/
+│   ├── skills/        # Workflow skills (/discover, /run-tasks, etc.)
+│   ├── agents/        # Agent prompt templates
+│   └── templates/     # Configuration templates
+└── .beads/            # Task management (via beads CLI)
+```
+
+## Prerequisites
+
+- [Claude Code](https://claude.ai/claude-code) - Anthropic's CLI for Claude
+- [Beads](https://github.com/steveyegge/beads) - Task management CLI (auto-installed if missing)
+- Node.js 16+
+
+## Next Steps
+
+After running `parade-init`:
+
+1. Open Claude Code in your project directory
+2. Run `/init-project` to configure your project
+3. Run `/parade-doctor` to verify setup
+4. Start building with `/discover`
+
+## Visual Dashboard (Optional)
+
+The Parade app provides a visual Kanban board:
+
+```bash
+git clone https://github.com/JeremyKalmus/parade.git ~/parade
+cd ~/parade && npm install
+npm run dev
+```
+
+## Skills Included
+
+| Skill | Purpose |
+|-------|---------|
+| `/init-project` | Configure project settings |
+| `/discover` | Capture feature ideas and generate specs |
+| `/approve-spec` | Export specs to beads as tasks |
+| `/run-tasks` | Execute tasks via sub-agents |
+| `/retro` | Analyze execution and improve workflow |
+| `/evolve` | Capture new patterns for reuse |
+| `/parade-doctor` | Diagnose setup issues |
+| `/workflow-status` | Check current workflow state |
 
 ## License
 
