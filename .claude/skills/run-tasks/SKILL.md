@@ -447,18 +447,33 @@ All tasks closed. Feature ready for review.
 
 When no more ready work AND all child tasks are closed:
 
-**Ask the user:**
+**Step 10a: Check for evolutions**
+
+Before presenting options, run evolution detection:
+
+```bash
+# Analyze git diff for new additions
+git diff main...HEAD --name-only | wc -l
+
+# Quick check for new exports (components, types, patterns)
+git diff main...HEAD -- "src/renderer/**/*.tsx" | grep -c "^+export" || echo 0
+git diff main...HEAD -- "src/shared/types/**/*.ts" | grep -c "^+export" || echo 0
+```
+
+**Step 10b: Present options to user:**
 ```
 All tasks for "<epic-title>" are complete.
 
 Completed: X tasks
 Blocked: Y tasks (if any)
 Debug loops: Z
+New additions detected: N (components, fields, patterns)
 
 Options:
 1. Merge and close epic
-2. Merge and close with retrospective (recommended if debug loops > 0)
-3. Keep open for manual review
+2. Capture evolutions and close (recommended if new additions > 0)
+3. Run retrospective + evolutions (recommended if debug loops > 0)
+4. Keep open for manual review
 ```
 
 **Option 1: Merge and close:**
@@ -497,16 +512,29 @@ bd close <epic-id>
 sqlite3 "$DISCOVERY_DB" "UPDATE briefs SET status = 'completed', updated_at = datetime('now') WHERE exported_epic_id = '<epic-id>';"
 ```
 
-**Option 2: With retrospective:**
+**Option 2: Capture evolutions and close:**
 
-Before merge, invoke the retrospective skill:
+Before merge, invoke the evolution skill:
 
-1. **Invoke `/retro <epic-id>` skill** - handles all analysis, recommendations, and archiving
-2. **Then proceed with merge and close** (Option 1 steps 1-5, including brief status update)
+1. **Invoke `/evolve <epic-id>` skill** - detects new components, fields, and patterns
+2. **Review and approve** additions to design registries
+3. **Then proceed with merge and close** (Option 1 steps 1-5, including brief status update)
 
-See [Retro Skill](../../skills/retro/SKILL.md) for full retrospective process.
+See [Evolve Skill](../evolve/SKILL.md) for evolution capture process.
 
-**Option 3: Keep open:**
+**Option 3: Retrospective + evolutions:**
+
+For epics with both debug loops AND new additions:
+
+1. **Invoke `/retro <epic-id>` skill** - handles failure analysis, recommendations, and archiving
+2. **Invoke `/evolve <epic-id>` skill** - captures positive evolutions
+3. **Then proceed with merge and close** (Option 1 steps 1-5, including brief status update)
+
+This captures both lessons learned (from failures) and knowledge gained (from new patterns).
+
+See [Retro Skill](../retro/SKILL.md) and [Evolve Skill](../evolve/SKILL.md) for details.
+
+**Option 4: Keep open:**
 Leave epic as `in_progress` on its branch for further review or manual testing.
 
 See [Git Strategy](./docs/git-strategy.md) for rollback procedures if issues are discovered after merge.

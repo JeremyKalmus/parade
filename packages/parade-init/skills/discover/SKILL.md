@@ -274,6 +274,56 @@ INSERT INTO sme_reviews (id, brief_id, agent_type, findings, recommendations, co
 VALUES ('<brief-id>-tech-review', '<brief-id>', 'technical-sme', '<findings>', '<recommendations>', '<concerns>', datetime('now'));
 ```
 
+### Step 7a: Load Design Registries (Pattern Reuse)
+
+Before synthesizing the spec, load existing patterns to ensure consistency:
+
+```bash
+# Load existing components, fields, and patterns
+COMPONENTS_FILE=".design/Components.md"
+FIELDS_FILE=".design/Fields.md"
+PATTERNS_FILE=".design/Patterns.md"
+
+# Extract key sections for context
+if [ -f "$COMPONENTS_FILE" ]; then
+  # Get list of documented components
+  AVAILABLE_COMPONENTS=$(grep -E "^### " "$COMPONENTS_FILE" | sed 's/### //' | head -20)
+fi
+
+if [ -f "$FIELDS_FILE" ]; then
+  # Get list of documented fields/enums
+  AVAILABLE_FIELDS=$(grep -E "^\| \`" "$FIELDS_FILE" | sed 's/| `//' | cut -d'`' -f1 | head -30)
+fi
+
+if [ -f "$PATTERNS_FILE" ]; then
+  # Get list of documented patterns
+  AVAILABLE_PATTERNS=$(grep -E "^### " "$PATTERNS_FILE" | sed 's/### //' | head -20)
+fi
+```
+
+**Present available patterns during spec synthesis:**
+
+When generating the spec's design notes and task breakdown, reference existing patterns:
+
+```
+Available Components (from .design/Components.md):
+- Button, Card, Badge, Input, Select, Dialog, Tabs, Toast, ...
+
+Available Fields (from .design/Fields.md):
+- id, created_at, updated_at, status, priority, title, description, ...
+- Enums: IssueStatus, IssueType, BriefStatus, Priority, ...
+
+Available Patterns (from .design/Patterns.md):
+- Zustand Store Pattern, IPC Handler Pattern, useEffect Data Loading, ...
+```
+
+**Spec should reference existing patterns where applicable:**
+- Use existing components rather than creating new ones
+- Reuse field naming conventions and existing enums
+- Follow documented patterns for state management, data fetching, etc.
+
+Only propose NEW components/fields/patterns when existing ones don't fit the requirement.
+
 ### Step 8: Synthesize Spec
 
 Create specification from discovery findings:
@@ -331,6 +381,17 @@ UPDATE briefs SET status = 'spec_ready', updated_at = datetime('now') WHERE id =
 **Design Notes:**
 <technical approach from SME review or derived from answers>
 
+**Patterns & Components:**
+*Existing (from registries):*
+- Components: Card, Badge, Button (from .design/Components.md)
+- Fields: status, priority, created_at (from .design/Fields.md)
+- Patterns: Zustand Store, IPC Handler (from .design/Patterns.md)
+
+*New (will be added by /evolve):*
+- Component: <NewComponentName> - <brief description>
+- Field: <new_field_name> - <type and purpose>
+- Pattern: <NewPattern> - <what it does>
+
 **Proposed Tasks:**
 1. Task 1: <description> [agent:sql]
 2. Task 2: <description> [agent:typescript]
@@ -344,6 +405,8 @@ UPDATE briefs SET status = 'spec_ready', updated_at = datetime('now') WHERE id =
 To approve and create beads tasks: /approve-spec <brief-id>-spec
 To request changes: Tell me what to revise
 ```
+
+**Note:** New components, fields, and patterns will be captured by `/evolve` at epic completion and added to the registries for future reuse.
 
 ---
 
