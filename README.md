@@ -2,144 +2,165 @@
 
 **Workflow orchestration for Claude Code** - Transform feature ideas into implemented code through structured discovery, specialized agents, and visual progress tracking.
 
-Parade is a companion app for [Beads](https://github.com/steveyegge/beads), providing a visual interface and guided workflow for AI-assisted software development.
+Parade is a companion system for [Beads](https://github.com/steveyegge/beads), providing guided workflows and an optional visual dashboard for AI-assisted software development.
 
 > *Like beads at a parade* - Parade helps you catch and organize the work that Claude Code produces.
 
 ---
 
-## What is Parade?
-
-Parade is an Electron app that helps Claude Code users:
-
-- **Discover features systematically** - Structured interview questions and SME agent reviews
-- **Track implementation progress** - Visual Kanban board with batch swimlanes
-- **Orchestrate sub-agents** - Coordinate parallel task execution with TDD support
-- **Improve over time** - Retrospective analysis after each epic
-
-### The Workflow
-
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│  /init-project  →  /discover  →  /approve-spec  →  /run-tasks  →  /retro        │
-│  (setup)           (idea+spec)   (create beads)    (execute)      (optional)     │
-└──────────────────────────────────────────────────────────────────────────────────┘
-```
-
-1. **`/init-project`** - Set up project configuration and scaffolding
-2. **`/discover`** - Capture idea, assess complexity, run discovery, generate spec
-3. **`/approve-spec`** - Export approved spec to Beads as epic + tasks
-4. **`/run-tasks`** - Execute tasks via coordinated sub-agents
-5. **`/retro`** *(optional)* - Analyze execution and generate workflow improvements
-
----
-
-## Prerequisites
-
-- [Claude Code](https://claude.ai/claude-code) - Anthropic's CLI for Claude
-- [Beads](https://github.com/steveyegge/beads) - Task management CLI (`npm install -g beads`)
-- Node.js 18+ and npm
-
----
-
 ## Quick Start
 
-Parade has two components:
-1. **Skills & Scaffolding** - Installed per-project via `npx parade-init`
-2. **Visual Dashboard** - The Electron app (this repository)
+### 1. Install Beads CLI (required)
 
-### Option A: Use Skills Only (No Visual Dashboard)
+```bash
+npm install -g beads
+```
 
-If you just want the workflow skills without the visual app:
+### 2. Initialize Your Project
 
 ```bash
 cd /path/to/your-project
 npx parade-init
 ```
 
-Then in Claude Code:
-```
-/init-project
-```
-
-You're ready to use `/discover`, `/approve-spec`, `/run-tasks`, etc.
-
-### Option B: Full Setup with Visual Dashboard
-
-#### Step 1: Install the Parade App
-
-```bash
-# Clone the Parade repository (one-time setup)
-git clone https://github.com/JeremyKalmus/parade.git ~/parade
-cd ~/parade
-npm install
-```
-
-#### Step 2: Initialize Your Project
-
-```bash
-cd /path/to/your-project
-npx parade-init
-```
-
-This creates the base structure:
+This creates the workflow scaffolding:
 - `.parade/` - Discovery database and workflow data
-- `.claude/` - Skills, agents, and schemas
-- `.beads/` - Task management data (via Beads CLI)
+- `.claude/skills/` - All Parade workflow skills
+- `.beads/` - Task management (via Beads CLI)
 
-#### Step 3: Configure Project (in Claude Code)
+### 3. Configure Project (in Claude Code)
 
+```bash
+claude  # Open Claude Code in your project
+```
+
+Then run:
 ```
 /init-project
 ```
 
-This interactive wizard creates:
-- `project.yaml` - Project configuration with stack, governance, and vision
-- `.design/` - Design system docs (optional)
-- Custom agent definitions based on your stack
+This interactive wizard creates your `project.yaml` with stack configuration, governance rules, and agent definitions.
 
-#### Step 4: Run the Dashboard
-
-```bash
-cd ~/parade
-npm run dev
-```
-
-The app opens to the **Guide** page. Open your project folder to see briefs, epics, and tasks.
-
-### Start Building Features
+### 4. Start Building!
 
 Describe a feature to Claude:
-
 ```
 I want to add user authentication with OAuth support
 ```
 
-Claude will guide you through `/discover` → `/approve-spec` → `/run-tasks`.
+Claude will guide you through the workflow: `/discover` → `/approve-spec` → `/run-tasks`
+
+---
+
+## Visual Dashboard (Optional)
+
+The Parade app provides a visual Kanban board for tracking epics and tasks.
+
+### Download
+
+Download the latest release for your platform:
+
+**[→ Download Parade App](https://github.com/JeremyKalmus/parade/releases/latest)**
+
+| Platform | File |
+|----------|------|
+| macOS | `Parade-x.x.x.dmg` |
+| Windows | `Parade-Setup-x.x.x.exe` |
+
+### Run the App
+
+1. Install and open Parade
+2. Click "Open Project" and select your project folder
+3. View briefs, epics, and tasks in the visual interface
+
+---
+
+## The Workflow
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  /init-project  →  /discover  →  /approve-spec  →  /run-tasks  →  /retro        │
+│  (setup)           (idea+spec)   (create beads)    (execute)      (learn)        │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Skills Reference
+
+| Skill | Purpose |
+|-------|---------|
+| `/init-project` | Set up project configuration (run after `npx parade-init`) |
+| `/discover` | Capture idea + run discovery + generate spec |
+| `/approve-spec` | Export approved spec to Beads as epic + tasks |
+| `/run-tasks` | Execute tasks via coordinated sub-agents |
+| `/retro` | Analyze execution and generate improvements |
+| `/evolve` | Capture new patterns, components, fields from completed epics |
+| `/workflow-status` | Check current workflow state |
+| `/parade-doctor` | Diagnose project setup and health |
 
 ---
 
 ## Features
 
-### Visual Kanban Board
-
-Track epics and tasks with a 3-panel layout:
-- **Left**: Epic list with active/closed grouping
-- **Center**: Kanban columns or batch swimlanes
-- **Right**: Task details with dependencies
-
-### Batch Swimlanes
-
-When viewing an epic, tasks are organized into execution batches based on their dependency graph. This shows which tasks can run in parallel.
-
 ### Unified Discovery (`/discover`)
 
-Replaces the legacy two-step flow with a single command that:
-- Captures your feature idea
-- Assesses complexity (quick/standard/complex)
-- Presents batched interview questions
-- Spawns SME agents for review
-- Synthesizes specification
+Transform ideas into specifications with adaptive complexity:
+
+```
+I want to add a notification system for user activities
+```
+
+Parade assesses complexity and adjusts accordingly:
+- **Quick** (3 questions) - Small enhancements, config changes
+- **Standard** (5-6 questions) - Most features, new functionality
+- **Complex** (8+ questions) - Large initiatives, architectural changes
+
+SME agents review the discovery and synthesize a detailed specification.
+
+### Pattern Evolution (`/evolve`)
+
+Parade learns from every epic. When an epic completes, `/evolve` detects:
+- **New Components** - UI components created during implementation
+- **New Fields** - Data types, enums, and fields added
+- **New Patterns** - Reusable code patterns discovered
+
+These are captured in design registries (`.design/`) and referenced in future discoveries, ensuring consistency as your codebase grows.
+
+```
+/evolve bd-x7y8
+```
+
+Output:
+```
+## Evolution Report: bd-x7y8
+
+### New Additions Detected
+
+#### Components (2 new)
+1. DependencyGraph - Interactive graph for task dependencies
+2. StatusBadge - Reusable status indicator
+
+#### Fields (1 new)
+1. blocked_by - string[] - Array of blocking task IDs
+
+#### Patterns (1 new)
+1. useGraphLayout - Custom hook for auto-layout
+
+Apply these updates? [1] All [2] Selective [3] Skip
+```
+
+### Retrospectives (`/retro`)
+
+After completing an epic, analyze execution and improve:
+
+```
+/retro bd-x7y8
+```
+
+The retrospective:
+- **Calculates efficiency score** - Based on debug loops and blocked tasks (10 = perfect)
+- **Identifies patterns** - Recurring failures across tasks
+- **Generates recommendations** - Agent prompt updates, debug-knowledge entries
+- **Archives learnings** - `.claude/retrospectives/<epic-id>.md`
 
 ### TDD Support
 
@@ -152,84 +173,77 @@ workflow:
 
 This creates test tasks that block implementation tasks, enforcing RED-GREEN-DEBUG cycles.
 
-### Retrospectives (`/retro`)
+### Visual Kanban Board
 
-After completing an epic, run `/retro <epic-id>` to analyze execution and improve future runs:
-
-```
-/retro bd-x7y8
-```
-
-The retrospective:
-- **Calculates efficiency score** - Based on debug loops and blocked tasks (10 = perfect)
-- **Identifies patterns** - Recurring failures across tasks
-- **Generates recommendations** - Agent prompt updates, debug-knowledge entries
-- **Archives learnings** - `.claude/retrospectives/<epic-id>.md`
-- **Accumulates insights** - Updates `.claude/retrospectives/INSIGHTS.md`
-
-**Entry points:**
-| Command | Description |
-|---------|-------------|
-| `/retro <epic-id>` | Analyze a specific epic |
-| `/retro --recent` | Analyze most recent epic |
-| `/retro <epic-id> --dry-run` | Preview without making changes |
-| `/run-tasks` Step 10 | Option 2 triggers retro before closing |
-
-Changes require user approval before being applied to agent prompts or config files.
+The optional Parade app provides:
+- **Epic List** - Active/closed grouping with progress indicators
+- **Kanban Columns** - Open, In Progress, Blocked, Closed
+- **Batch Swimlanes** - Tasks organized by execution batch (parallel groups)
+- **Dependency Graph** - Visual task dependency visualization
 
 ---
 
 ## Project Structure
 
+After running `npx parade-init` and `/init-project`:
+
 ```
-parade/
-├── src/
-│   ├── main/           # Electron main process
-│   ├── renderer/       # React frontend
-│   │   ├── components/ # UI components
-│   │   ├── store/      # Zustand state management
-│   │   └── lib/        # Utilities
-│   ├── preload/        # Electron preload scripts
-│   └── shared/         # Shared types
-├── packages/
-│   └── parade-init/    # npm package for project scaffolding
+your-project/
 ├── .parade/
-│   └── discovery.db    # SQLite database for briefs, specs, telemetry
+│   └── discovery.db    # SQLite: briefs, specs, telemetry
 ├── .claude/
-│   ├── skills/         # Workflow skills
-│   ├── agents/         # Agent definitions
-│   └── schemas/        # JSON schemas
-├── .beads/             # Beads task data
-├── .design/            # Design system docs
+│   ├── skills/         # Workflow skills (8 total)
+│   ├── agents/         # Custom agent definitions
+│   ├── templates/      # Project templates
+│   └── retrospectives/ # Accumulated insights
+├── .beads/             # Task management data
+├── .design/            # Design registries (Components, Fields, Patterns)
 └── project.yaml        # Project configuration
 ```
 
 ---
 
-## Skills Reference
+## Prerequisites
 
-| Skill | Purpose |
-|-------|---------|
-| `/init-project` | Set up project configuration (after `npx parade-init`) |
-| `/discover` | Capture idea + run discovery + generate spec |
-| `/approve-spec` | Export approved spec to Beads |
-| `/run-tasks` | Execute tasks via sub-agents |
-| `/retro` | Analyze execution and generate improvements |
-| `/workflow-status` | Check current workflow state |
-| `/parade-doctor` | Diagnose project setup and health |
+- [Claude Code](https://claude.ai/claude-code) - Anthropic's CLI for Claude
+- [Beads](https://github.com/steveyegge/beads) - Task management CLI
+- Node.js 18+ and npm
+
+---
+
+## npm Package
+
+The skills and scaffolding are distributed via npm:
+
+```bash
+npx parade-init
+```
+
+**Package**: [parade-init on npm](https://www.npmjs.com/package/parade-init)
+
+This installs all 8 skills and creates the required directory structure. The visual dashboard is a separate download (see above).
 
 ---
 
 ## Development
 
-### Commands
+If you want to contribute to Parade or run from source:
 
 ```bash
-npm run dev        # Start development server
-npm run build      # Build for production
-npm run typecheck  # Run TypeScript checks
-npm test           # Run tests
+git clone https://github.com/JeremyKalmus/parade.git
+cd parade
+npm install
+npm run dev
 ```
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run typecheck` | Run TypeScript checks |
+| `npm test` | Run tests |
 
 ### Tech Stack
 
@@ -237,7 +251,7 @@ npm test           # Run tests
 - **Frontend**: React + TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui
 - **State**: Zustand
-- **Database**: SQLite (.parade/discovery.db) + Beads (.beads/)
+- **Database**: SQLite + Beads
 
 ---
 
@@ -256,4 +270,4 @@ MIT
 
 ## Contributing
 
-Contributions welcome! Please read the [onboarding guide](.docs/ONBOARDING.md) to understand the workflow.
+Contributions welcome! Please read the codebase patterns in `.design/Patterns.md` before submitting PRs.

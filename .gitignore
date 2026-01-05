@@ -31,3 +31,4 @@ out/
 
 # Feature artifacts (temporary agent outputs)
 .docs/features/
+npm_recovery_codes.txt
