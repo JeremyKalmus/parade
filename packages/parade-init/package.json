@@ -6,6 +6,11 @@
   "bin": {
     "parade-init": "./bin/parade-init.js"
   },
+  "files": [
+    "bin/",
+    "lib/",
+    "skills/"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

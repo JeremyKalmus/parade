@@ -75,23 +75,119 @@ async function scaffoldProject(projectPath = process.cwd(), options = {}) {
 async function main() {
   console.log('🎪 Parade Initializer v1.0.0\n');
 
+  const projectPath = process.cwd();
+
   try {
-    // Check beads installation
+    // Step 1: Check beads installation
     const beadsInstalled = await checkBeadsInstalled();
 
     if (!beadsInstalled) {
-      console.log('📦 Beads CLI not found. Installation will be required.');
-      // Actual installation will be implemented in task .2
-    } else {
-      console.log('✅ Beads CLI already installed');
+      console.log('\n📦 Installing beads CLI...');
+      try {
+        await installBeads();
+        console.log('✅ Beads CLI installed successfully');
+      } catch (installError) {
+        console.error('⚠️  Could not auto-install beads. Please install manually:');
+        console.error('   npm install -g beads');
+        console.error('   Or visit: https://github.com/steveyegge/beads');
+        // Continue with scaffolding even if beads install fails
+      }
     }
 
-    console.log('\n✨ Initialization complete! (placeholder)');
-    console.log('   Run `/init-project` in Claude Code to configure your project.');
+    // Step 2: Scaffold project directories
+    console.log('\n📁 Creating project structure...');
+    await scaffoldProject(projectPath, { createDesign: false });
+
+    // Step 3: Copy skill files
+    console.log('\n📋 Copying skill definitions...');
+    await copySkills(projectPath);
+
+    console.log('\n✨ Initialization complete!');
+    console.log('\nNext steps:');
+    console.log('   1. Open Claude Code in this directory');
+    console.log('   2. Run /init-project to configure your project');
+    console.log('   3. Run /parade-doctor to verify setup');
 
   } catch (error) {
     // Re-throw with context for better error messages
     throw new Error(`Initialization failed: ${error.message}`);
+  }
+}
+
+/**
+ * Copy skill files from the package to the project
+ * @param {string} projectPath - Path to the project root
+ * @returns {Promise<void>}
+ */
+async function copySkills(projectPath) {
+  const fs = require('fs').promises;
+  const path = require('path');
+
+  // Skills are bundled in the package's skills/ directory
+  const packageSkillsPath = path.join(__dirname, '..', 'skills');
+  const projectSkillsPath = path.join(projectPath, '.claude', 'skills');
+
+  try {
+    // Check if package has bundled skills
+    await fs.access(packageSkillsPath);
+  } catch {
+    console.log('   ⚠️  No bundled skills found (development mode)');
+    return;
+  }
+
+  // Copy each skill directory
+  const skillDirs = await fs.readdir(packageSkillsPath);
+  let copiedCount = 0;
+
+  for (const skillDir of skillDirs) {
+    const srcPath = path.join(packageSkillsPath, skillDir);
+    const destPath = path.join(projectSkillsPath, skillDir);
+
+    // Check if it's a directory
+    const stat = await fs.stat(srcPath);
+    if (!stat.isDirectory()) continue;
+
+    // Skip if skill already exists in project
+    try {
+      await fs.access(destPath);
+      console.log(`   ⏭️  ${skillDir} (already exists)`);
+      continue;
+    } catch {
+      // Skill doesn't exist, copy it
+    }
+
+    // Copy the skill directory recursively
+    await copyDir(srcPath, destPath);
+    console.log(`   ✅ ${skillDir}`);
+    copiedCount++;
+  }
+
+  if (copiedCount === 0) {
+    console.log('   All skills already present');
+  }
+}
+
+/**
+ * Recursively copy a directory
+ * @param {string} src - Source path
+ * @param {string} dest - Destination path
+ */
+async function copyDir(src, dest) {
+  const fs = require('fs').promises;
+  const path = require('path');
+
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyDir(srcPath, destPath);
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
   }
 }
 
