@@ -188,10 +188,36 @@ Your job:
 3. Write/update tests if applicable
 4. Verify your changes work
 
-Report when done:
-- Status: PASS or FAIL
-- Summary: 2-3 sentences of what you did
-- Files modified: list of paths
+## OUTPUT FORMAT (CRITICAL - Follow exactly)
+
+Your response MUST be minimal to avoid context overflow.
+
+1. Brief summary (2-3 sentences max)
+2. On your LAST LINE, output ONLY this compact JSON (no other text on this line):
+
+{"s":"<status>","t":<tokens>,"m":[<modified>],"c":[<created>]}
+
+Where:
+- "s": "s" for success, "f" for fail, "b" for blocked
+- "t": estimated tokens used (number)
+- "m": array of modified file paths
+- "c": array of created file paths
+- Add "e":"<type>" if failed: "t"=test, "b"=build, "o"=timeout
+- Add "x":"<msg>" for error message (max 200 chars)
+
+Example success:
+Implemented the user authentication module with JWT tokens. Added tests.
+{"s":"s","t":1500,"m":["src/auth.ts","src/auth.test.ts"],"c":["src/middleware/jwt.ts"]}
+
+Example failure:
+Build failed due to missing dependency.
+{"s":"f","t":800,"m":[],"c":[],"e":"b","x":"Cannot find module 'jsonwebtoken'"}
+
+DO NOT include:
+- Full file contents in your response
+- Long code blocks
+- Verbose explanations
+- Anything after the JSON line
 ```
 
 ---

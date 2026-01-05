@@ -1,18 +1,19 @@
-import { Routes, Route, NavLink, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
-import { BarChart3, FileText, Kanban, Settings, FolderPlus, BookOpen, Wand2, GraduationCap } from 'lucide-react';
+import { BarChart3, FileText, Kanban, Settings, FolderPlus, BookOpen, GraduationCap } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Label } from './components/ui/label';
 import { KanbanBoard, EpicListPanel, TaskDetailPanel } from './components/kanban';
 import { PipelineBoard, BriefDetailView, AgentActivityPanel } from './components/pipeline';
 import { BriefsList, BriefFullDetail } from './components/briefs';
 import { DocsPage } from './components/docs/DocsPage';
-import { ProjectWizard, type ProjectFormData } from './components/wizard/ProjectWizard';
 import { GuidePage } from './components/guide/GuidePage';
 import DragDropZone from './components/common/DragDropZone';
 import { ProjectChip } from './components/common/ProjectChip';
 import { ProjectTabBar } from './components/common/ProjectTabBar';
+import { SetupIncompleteState } from './components/common/SetupIncompleteState';
 import type { Project } from '../shared/types/settings';
+import type { SetupStatus } from '../shared/types/ipc';
 import { useBeadsStore } from './store/beadsStore';
 import discoveryClient from './lib/discoveryClient';
 
@@ -257,6 +258,70 @@ function SettingsView() {
 
 // Pipeline view with side panel
 function PipelineView() {
+  const [setupStatus, setSetupStatus] = useState<SetupStatus>('ready');
+  const [checkingStatus, setCheckingStatus] = useState(true);
+  const { activeProjectId, projects } = useBeadsStore();
+
+  // Check setup status when active project changes
+  useEffect(() => {
+    async function checkSetupStatus() {
+      const activeProject = projects.find((p) => p.id === activeProjectId);
+
+      if (!activeProject) {
+        setCheckingStatus(false);
+        return;
+      }
+
+      try {
+        setCheckingStatus(true);
+        const result = await window.electron.project.checkSetupStatus(activeProject.path);
+        setSetupStatus(result.status);
+      } catch (err) {
+        console.error('Failed to check setup status:', err);
+        // On error, assume ready to avoid blocking UI
+        setSetupStatus('ready');
+      } finally {
+        setCheckingStatus(false);
+      }
+    }
+
+    checkSetupStatus();
+  }, [activeProjectId, projects]);
+
+  // Show loading while checking
+  if (checkingStatus) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-3 text-slate-400">
+          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          Checking setup status...
+        </div>
+      </div>
+    );
+  }
+
+  // Show setup incomplete state if not ready
+  if (setupStatus !== 'ready') {
+    const activeProject = projects.find((p) => p.id === activeProjectId);
+    return <SetupIncompleteState status={setupStatus} projectPath={activeProject?.path} />;
+  }
+
+  // Normal pipeline view
   return (
     <div className="flex h-full">
       <div className="flex-1 overflow-hidden">
@@ -364,60 +429,6 @@ function KanbanView() {
           />
         </div>
       )}
-    </div>
-  );
-}
-
-// Project Wizard view with handlers
-function ProjectWizardView() {
-  const navigate = useNavigate();
-  const { setActiveProject } = useBeadsStore();
-
-  const handleSubmit = useCallback(async (formData: ProjectFormData) => {
-    try {
-      // Create new project object
-      const newProject: Project = {
-        id: crypto.randomUUID(),
-        name: formData.name,
-        path: formData.targetPath || '',
-        addedAt: new Date().toISOString(),
-        isActive: true,
-      };
-
-      // Load current projects from settings
-      const settings = await window.electron.settings.get('all');
-      const currentProjects: Project[] = settings?.projects ?? [];
-
-      // Mark all existing projects as inactive, add new project
-      const updatedProjects = currentProjects.map(p => ({
-        ...p,
-        isActive: false,
-      }));
-      updatedProjects.push(newProject);
-
-      // Save to settings
-      await window.electron.settings.set('projects', updatedProjects);
-      await window.electron.settings.set('beadsProjectPath', newProject.path);
-
-      // Update beadsStore
-      setActiveProject(newProject.id);
-    } catch (err) {
-      console.error('Failed to add project from wizard:', err);
-    }
-  }, [setActiveProject]);
-
-  const handleComplete = useCallback(() => {
-    navigate('/pipeline');
-  }, [navigate]);
-
-  return (
-    <div className="h-full overflow-auto p-6">
-      <div className="max-w-3xl mx-auto">
-        <ProjectWizard
-          onSubmit={handleSubmit}
-          onComplete={handleComplete}
-        />
-      </div>
     </div>
   );
 }
@@ -545,19 +556,6 @@ export default function App() {
             Docs
           </NavLink>
           <NavLink
-            to="/init-project"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-sky-900/30 text-sky-400'
-                  : 'text-slate-400 hover:bg-slate-900'
-              }`
-            }
-          >
-            <Wand2 className="w-5 h-5" />
-            Init Project
-          </NavLink>
-          <NavLink
             to="/guide"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -607,7 +605,6 @@ export default function App() {
           <Route path="/briefs" element={<BriefsView />} />
           <Route path="/kanban" element={<KanbanView />} />
           <Route path="/docs" element={<DocsPage />} />
-          <Route path="/init-project" element={<ProjectWizardView />} />
           <Route path="/guide" element={<GuidePage />} />
           <Route path="/settings" element={<SettingsView />} />
         </Routes>

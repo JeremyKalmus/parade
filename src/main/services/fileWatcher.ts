@@ -1,5 +1,6 @@
 // FileWatcherService - Real-time file system monitoring for discovery.db and .beads/
 // Uses chokidar for cross-platform file watching with debouncing
+// Supports both .parade/discovery.db (new) and root discovery.db (legacy)
 
 import chokidar, { FSWatcher } from 'chokidar';
 import { EventEmitter } from 'events';
@@ -33,16 +34,26 @@ const WATCHER_OPTIONS: chokidar.WatchOptions = {
  *
  * This enables real-time updates without polling.
  *
+ * Supports both:
+ * - .parade/discovery.db (new location)
+ * - discovery.db at project root (legacy)
+ *
+ * Can also watch for discovery.db creation in .parade/ directory.
+ *
  * Usage:
  *   fileWatcherService.on('change', (event: FileChangeEvent) => {
  *     mainWindow.webContents.send('file-changed', event);
  *   });
- *   fileWatcherService.watchDiscovery('/path/to/discovery.db');
+ *   fileWatcherService.watchDiscovery('/path/to/.parade/discovery.db');
  *   fileWatcherService.watchBeads('/path/to/.beads/');
+ *   fileWatcherService.watchForDiscoveryCreation('/path/to/.parade/', (dbPath) => {
+ *     // Handle discovery.db creation
+ *   });
  */
 class FileWatcherService extends EventEmitter {
   private discoveryWatcher: FSWatcher | null = null;
   private beadsWatcher: FSWatcher | null = null;
+  private paradeWatcher: FSWatcher | null = null;
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private debounceMs: number = 200;
 
@@ -83,6 +94,64 @@ class FileWatcherService extends EventEmitter {
         });
     } catch (err) {
       console.error('Failed to start discovery watcher:', err);
+      this.emit('error', { type: 'discovery', error: err });
+    }
+  }
+
+  /**
+   * Watch the .parade/ directory for discovery.db creation
+   * Used when .parade/ exists but discovery.db hasn't been created yet
+   * @param paradeDir - Absolute path to .parade/ directory
+   * @param onDiscoveryCreated - Callback when discovery.db is created
+   */
+  watchForDiscoveryCreation(
+    paradeDir: string,
+    onDiscoveryCreated: (dbPath: string) => void
+  ): void {
+    // Stop existing parade watcher if any
+    if (this.paradeWatcher) {
+      this.paradeWatcher.close().catch((err) => {
+        console.error('Error closing parade watcher:', err);
+      });
+      this.paradeWatcher = null;
+    }
+
+    try {
+      this.paradeWatcher = chokidar.watch(paradeDir, {
+        ...WATCHER_OPTIONS,
+        // Don't ignore initial files - we want to catch if discovery.db appears
+        ignoreInitial: false,
+        // Watch for files being added to this directory
+        depth: 0,
+      });
+
+      this.paradeWatcher
+        .on('add', (filePath) => {
+          // Check if the added file is discovery.db
+          if (filePath.endsWith('discovery.db')) {
+            console.log('Discovery database created in .parade/:', filePath);
+
+            // Stop watching the parade directory
+            if (this.paradeWatcher) {
+              this.paradeWatcher.close().catch((err) => {
+                console.error('Error closing parade watcher:', err);
+              });
+              this.paradeWatcher = null;
+            }
+
+            // Notify caller to switch to watching the db file
+            onDiscoveryCreated(filePath);
+          }
+        })
+        .on('error', (error) => {
+          console.error('Parade directory watcher error:', error);
+          this.emit('error', { type: 'discovery', error });
+        })
+        .on('ready', () => {
+          console.log('Watching for discovery.db creation in:', paradeDir);
+        });
+    } catch (err) {
+      console.error('Failed to start parade directory watcher:', err);
       this.emit('error', { type: 'discovery', error: err });
     }
   }
@@ -152,6 +221,15 @@ class FileWatcherService extends EventEmitter {
       });
       this.beadsWatcher = null;
       console.log('Beads watcher stopped');
+    }
+
+    // Close parade watcher
+    if (this.paradeWatcher) {
+      this.paradeWatcher.close().catch((err) => {
+        console.error('Error closing parade watcher:', err);
+      });
+      this.paradeWatcher = null;
+      console.log('Parade directory watcher stopped');
     }
   }
 

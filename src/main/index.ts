@@ -2,6 +2,7 @@
 
 import { app, BrowserWindow, shell } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { registerIpcHandlers } from './ipc/handlers';
 import { registerProjectHandlers } from './ipc/project-handlers';
 import { fileWatcherService } from './services/fileWatcher';
@@ -10,6 +11,7 @@ import beadsService from './services/beads';
 import settingsService from './services/settings';
 import { docsService } from './services/docs';
 import { telemetryService } from './services/telemetry';
+import { migrationService } from './services/migration';
 import { IPC_CHANNELS } from '../shared/types/ipc';
 
 let mainWindow: BrowserWindow | null = null;
@@ -35,13 +37,48 @@ const sendBeadsChange = debounce(() => {
 }, 300);
 
 /**
+ * Get the discovery.db path with fallback support
+ * First checks .parade/discovery.db (new location), falls back to discovery.db (legacy)
+ * @param projectPath - The project root path
+ * @returns The path to discovery.db
+ */
+function getDiscoveryDbPath(projectPath: string): string {
+  const newPath = path.join(projectPath, '.parade', 'discovery.db');
+  const legacyPath = path.join(projectPath, 'discovery.db');
+
+  // Check new location first
+  if (fs.existsSync(newPath)) {
+    console.log('Using discovery.db from .parade/ directory:', newPath);
+    return newPath;
+  }
+
+  // Fall back to legacy location
+  if (fs.existsSync(legacyPath)) {
+    console.log('Using legacy discovery.db from project root:', legacyPath);
+    return legacyPath;
+  }
+
+  // Default to new location if neither exists (for new projects)
+  console.log('No existing discovery.db found, will use .parade/ location:', newPath);
+  return newPath;
+}
+
+/**
  * Initialize file watchers based on saved project path
  */
-function initializeFileWatchers(): void {
+async function initializeFileWatchers(): Promise<void> {
   const projectPath = settingsService.get('beadsProjectPath');
   if (projectPath) {
-    // Initialize DiscoveryService with database path
-    const discoveryDbPath = path.join(projectPath, 'discovery.db');
+    // Auto-migrate discovery.db if needed
+    const migrationResult = await migrationService.migrateDiscoveryDb(projectPath);
+    if (migrationResult.migrated) {
+      console.log(`Migrated discovery.db from ${migrationResult.from} to ${migrationResult.to}`);
+    } else if (migrationResult.error) {
+      console.error('Migration failed, continuing with legacy path:', migrationResult.error);
+    }
+
+    // Initialize DiscoveryService with database path (with fallback support)
+    const discoveryDbPath = getDiscoveryDbPath(projectPath);
     discoveryService.setDatabasePath(discoveryDbPath);
     console.log('DiscoveryService initialized with:', discoveryDbPath);
 
@@ -57,8 +94,31 @@ function initializeFileWatchers(): void {
     docsService.setProjectPath(projectPath);
     console.log('DocsService initialized with:', projectPath);
 
-    // Watch discovery.db for changes
-    fileWatcherService.watchDiscovery(discoveryDbPath);
+    // Set up discovery.db watching with smart fallback
+    const paradeDir = path.join(projectPath, '.parade');
+
+    if (fs.existsSync(discoveryDbPath)) {
+      // Watch the existing discovery.db file (either .parade/ or legacy location)
+      fileWatcherService.watchDiscovery(discoveryDbPath);
+    } else if (fs.existsSync(paradeDir)) {
+      // .parade/ exists but discovery.db doesn't yet - watch for creation
+      console.log('Watching for discovery.db creation in .parade/');
+      fileWatcherService.watchForDiscoveryCreation(paradeDir, (createdDbPath) => {
+        // Update services to use the newly created db
+        discoveryService.setDatabasePath(createdDbPath);
+        telemetryService.setDatabasePath(createdDbPath);
+        console.log('Discovery database created, services updated:', createdDbPath);
+
+        // Start watching the newly created db file
+        fileWatcherService.watchDiscovery(createdDbPath);
+
+        // Notify UI of discovery change
+        sendDiscoveryChange();
+      });
+    } else {
+      // Neither .parade/ nor discovery.db exists - watcher will be set up when file is created
+      console.log('No discovery.db found yet, will watch when created');
+    }
 
     // Watch .beads/ directory for changes
     const beadsPath = path.join(projectPath, '.beads');
@@ -122,13 +182,13 @@ function createWindow() {
 }
 
 // Register IPC handlers before creating window
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   registerIpcHandlers();
   registerProjectHandlers();
 
   // Initialize services BEFORE creating window so they're ready when renderer starts
   setupFileWatcherEvents();
-  initializeFileWatchers();
+  await initializeFileWatchers();
 
   // Now create the window
   createWindow();

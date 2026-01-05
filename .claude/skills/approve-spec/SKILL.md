@@ -45,7 +45,22 @@ If this skill is taking longer than expected, check:
 
 ## Process Overview
 
-### Step 0: Load Project Configuration
+### Step 0a: Path Detection
+
+Determine the location of discovery.db to support both new `.parade/` structure and legacy project root:
+
+```bash
+# Path detection for .parade/ structure
+if [ -f ".parade/discovery.db" ]; then
+  DISCOVERY_DB=".parade/discovery.db"
+else
+  DISCOVERY_DB="./discovery.db"
+fi
+```
+
+All subsequent database operations in this skill use `$DISCOVERY_DB` instead of hardcoded `discovery.db`.
+
+### Step 0b: Load Project Configuration
 
 Check for `project.yaml` to determine testing commands and TDD mode:
 
@@ -66,7 +81,7 @@ fi
 ### Step 1: Load Spec
 
 ```bash
-sqlite3 -json discovery.db "SELECT * FROM specs WHERE id = '<spec-id>';"
+sqlite3 -json "$DISCOVERY_DB" "SELECT * FROM specs WHERE id = '<spec-id>';"
 ```
 
 Verify spec exists and status is 'review'. Also load the associated brief.

@@ -46,6 +46,21 @@ Analyze completed epic executions and generate actionable recommendations for wo
 
 ## Process
 
+### Step 0: Path Detection
+
+Determine the location of discovery.db to support both new `.parade/` structure and legacy project root:
+
+```bash
+# Path detection for .parade/ structure
+if [ -f ".parade/discovery.db" ]; then
+  DISCOVERY_DB=".parade/discovery.db"
+else
+  DISCOVERY_DB="./discovery.db"
+fi
+```
+
+All subsequent database operations in this skill use `$DISCOVERY_DB` instead of hardcoded `discovery.db`.
+
 ### Step 1: Resolve Epic Context
 
 Determine which epic(s) to analyze based on invocation:

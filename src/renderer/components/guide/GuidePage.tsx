@@ -24,11 +24,24 @@ const workflowSteps = [
     title: 'Initialize Project',
     shortDescription: 'Set up project configuration and directory scaffold.',
     description:
-      'Set up project configuration and directory scaffold with configuration files, agent definitions, and task management structure.',
+      'Two-step initialization process: First, run npx parade-init in your terminal to scaffold the directory structure and install beads. Then, use /init-project in Claude to configure your project with guided questions.',
     whenToUse:
       'Starting a new project or adding configuration to an existing codebase',
-    outputs: ['project.yaml', '.claude/', '.beads/', 'docs/CONSTITUTION.md'],
-    example: `Claude: What is the name of this project?
+    outputs: ['.parade/', 'project.yaml', '.claude/', '.beads/', 'docs/CONSTITUTION.md'],
+    example: `# Step 1: Scaffold the project
+$ npx parade-init
+🎪 Parade Initializer v1.0.0
+✅ Beads CLI installed
+✅ Created .parade/
+✅ Created .claude/
+✅ Initialized .beads/
+
+# Step 2: Configure with Claude
+$ claude
+User: /init-project
+Claude: Let's configure your project...
+
+Claude: What is the name of this project?
 You: MyTaskTracker
 
 Claude: Describe the project in 1-2 sentences.

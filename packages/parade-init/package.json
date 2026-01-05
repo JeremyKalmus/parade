@@ -1,0 +1,28 @@
+{
+  "name": "parade-init",
+  "version": "1.0.0",
+  "description": "CLI tool to initialize new Parade workflow orchestrator projects",
+  "main": "./lib/index.js",
+  "bin": {
+    "parade-init": "./bin/parade-init.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "parade",
+    "workflow",
+    "orchestrator",
+    "beads",
+    "cli"
+  ],
+  "author": "Parade Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/parade"
+  }
+}

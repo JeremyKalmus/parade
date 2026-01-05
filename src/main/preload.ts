@@ -6,7 +6,6 @@ import type {
   ElectronAPI,
   FileChangeEvent,
   ProjectConfig,
-  ScaffoldOptions,
   DetectedMCP,
   MCPInstallOptions,
   TerminalLaunchOptions,
@@ -91,8 +90,8 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.PROJECT_READ_CONFIG, projectPath),
     writeConfig: (projectPath: string, config: ProjectConfig) =>
       ipcRenderer.invoke(IPC_CHANNELS.PROJECT_WRITE_CONFIG, projectPath, config),
-    createScaffold: (options: ScaffoldOptions) =>
-      ipcRenderer.invoke(IPC_CHANNELS.PROJECT_CREATE_SCAFFOLD, options),
+    checkSetupStatus: (projectPath: string) =>
+      ipcRenderer.invoke(IPC_CHANNELS.PROJECT_CHECK_SETUP_STATUS, projectPath),
   },
   mcp: {
     detect: (projectPath: string) =>

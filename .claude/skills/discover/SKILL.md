@@ -30,6 +30,21 @@ Transform a user's feature idea into a detailed specification through a unified 
 
 ## Process
 
+### Step 0: Path Detection
+
+Determine the location of discovery.db to support both new `.parade/` structure and legacy project root:
+
+```bash
+# Path detection for .parade/ structure
+if [ -f ".parade/discovery.db" ]; then
+  DISCOVERY_DB=".parade/discovery.db"
+else
+  DISCOVERY_DB="./discovery.db"
+fi
+```
+
+All subsequent database operations in this skill use `$DISCOVERY_DB` instead of hardcoded `discovery.db`.
+
 ### Step 1: Capture Initial Idea
 
 Ask the user to describe their feature idea. Listen for:
@@ -70,7 +85,7 @@ Run schema migration and insert brief:
 
 ```bash
 # Ensure tables exist with complexity_level column
-sqlite3 discovery.db "
+sqlite3 "$DISCOVERY_DB" "
 CREATE TABLE IF NOT EXISTS briefs (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -89,7 +104,7 @@ ALTER TABLE briefs ADD COLUMN complexity_level TEXT DEFAULT 'standard';
 "
 
 # Insert the brief
-sqlite3 discovery.db "INSERT INTO briefs (id, title, problem_statement, initial_thoughts, priority, complexity_level, status)
+sqlite3 "$DISCOVERY_DB" "INSERT INTO briefs (id, title, problem_statement, initial_thoughts, priority, complexity_level, status)
 VALUES ('<brief-id>', '<title>', '<problem>', '<initial_thoughts>', <priority>, '<complexity_level>', 'in_discovery');"
 ```
 
@@ -192,8 +207,8 @@ For quick enhancements, skip SME agents entirely and proceed to spec synthesis.
 Task: Technical review for brief '<brief-id>'
 
 Context:
-- Read brief: sqlite3 -json discovery.db "SELECT * FROM briefs WHERE id = '<brief-id>';"
-- Read answers: sqlite3 -json discovery.db "SELECT * FROM interview_questions WHERE brief_id = '<brief-id>';"
+- Read brief: sqlite3 -json "$DISCOVERY_DB" "SELECT * FROM briefs WHERE id = '<brief-id>';"
+- Read answers: sqlite3 -json "$DISCOVERY_DB" "SELECT * FROM interview_questions WHERE brief_id = '<brief-id>';"
 
 Analyze:
 1. Review existing codebase for relevant patterns
@@ -209,7 +224,7 @@ Output: Write findings to sme_reviews table with agent_type = 'technical-sme'
 Task: Business review for brief '<brief-id>'
 
 Context:
-- Read brief and interview answers from discovery.db
+- Read brief and interview answers from $DISCOVERY_DB
 
 Analyze:
 1. Validate requirements completeness
@@ -237,7 +252,7 @@ For each custom agent in `project.yaml`:
 Task: Domain review for brief '<brief-id>'
 
 Context:
-- Read brief and interview answers from discovery.db
+- Read brief and interview answers from $DISCOVERY_DB
 - Your domain prompt is loaded from <prompt_file>
 
 Output: Write findings to sme_reviews table with agent_type = '<agent-label>'
@@ -358,7 +373,7 @@ ALTER TABLE briefs ADD COLUMN complexity_level TEXT DEFAULT 'standard';
 
 For idempotent migration in bash:
 ```bash
-sqlite3 discovery.db "ALTER TABLE briefs ADD COLUMN complexity_level TEXT DEFAULT 'standard';" 2>/dev/null || true
+sqlite3 "$DISCOVERY_DB" "ALTER TABLE briefs ADD COLUMN complexity_level TEXT DEFAULT 'standard';" 2>/dev/null || true
 ```
 
 ---
@@ -463,7 +478,7 @@ Please answer these questions (all at once is fine):
 ## Output
 
 After successful execution:
-- Brief record in `discovery.db` with complexity_level set
+- Brief record in `$DISCOVERY_DB` (`.parade/discovery.db` or `./discovery.db`) with complexity_level set
 - Interview questions and answers recorded
 - SME reviews in `sme_reviews` table (for standard/complex)
 - Spec in `specs` table with status 'review'

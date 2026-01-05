@@ -655,7 +655,8 @@ export function registerProjectHandlers(): void {
     return writeProjectConfig(projectPath, config)
   })
 
-  ipcMain.handle('project:createScaffold', async (_event, options: ScaffoldOptions) => {
-    return createProjectScaffold(options)
-  })
+  // NOTE: Scaffolding is now handled by npx parade-init package
+  // ipcMain.handle('project:createScaffold', async (_event, options: ScaffoldOptions) => {
+  //   return createProjectScaffold(options)
+  // })
 }

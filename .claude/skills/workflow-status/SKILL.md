@@ -19,12 +19,27 @@ Provide a comprehensive view of the current state of all workflow activities, co
 
 ## Process
 
+### Step 0: Path Detection
+
+Determine the location of discovery.db to support both new `.parade/` structure and legacy project root:
+
+```bash
+# Path detection for .parade/ structure
+if [ -f ".parade/discovery.db" ]; then
+  DISCOVERY_DB=".parade/discovery.db"
+else
+  DISCOVERY_DB="./discovery.db"
+fi
+```
+
+All subsequent database operations in this skill use `$DISCOVERY_DB` instead of hardcoded `discovery.db`.
+
 ### Step 1: Query Discovery Pipeline
 
 Check for briefs in the pre-approval workflow:
 
 ```bash
-sqlite3 -json discovery.db "
+sqlite3 -json "$DISCOVERY_DB" "
 SELECT
   id,
   title,
@@ -82,7 +97,7 @@ bd ready --json
 Get the last 10 workflow events:
 
 ```bash
-sqlite3 -json discovery.db "
+sqlite3 -json "$DISCOVERY_DB" "
 SELECT
   brief_id,
   event_type,
@@ -320,7 +335,7 @@ Show relative time when recent (< 24h), otherwise show absolute:
 
 ### Discovery DB Not Found
 ```
-Warning: discovery.db not found at project root.
+Warning: discovery.db not found at .parade/ or project root.
 No discovery pipeline data available.
 
 Run /create-brief to start a new feature.
@@ -342,7 +357,7 @@ No active briefs, epics, or tasks found.
 
 Suggested Actions:
 - Run /create-brief to start a new feature
-- Check archived work: sqlite3 discovery.db "SELECT * FROM briefs WHERE status = 'archived';"
+- Check archived work: sqlite3 "$DISCOVERY_DB" "SELECT * FROM briefs WHERE status = 'archived';"
 ```
 
 ---

@@ -1,13 +1,13 @@
 ---
 name: init-project
-description: Initialize a new project with guided configuration wizard. Creates project.yaml at repository root along with full directory scaffold (.claude/, .beads/, .design/). Supports single app and monorepo configurations. Use when setting up a new project or adding configuration to an existing one.
+description: Initialize a new project with guided configuration wizard. Checks for .parade/ scaffolding, creates comprehensive constitution, governance policies, design system, and custom agents. Supports single app and monorepo configurations. Use when setting up a new project or adding configuration to an existing one.
 ---
 
 # Init Project Skill
 
 ## Purpose
 
-Guide users through project configuration with progressive disclosure: capture essential project info, configure primary stack, optionally add design system and custom SME agents, then generate `project.yaml` and create directory scaffold.
+Guide users through comprehensive project configuration with progressive disclosure: check environment, capture project basics, create project constitution, configure stack and governance, optionally add design system and custom SME agents, then generate `project.yaml` and create directory scaffold.
 
 ## When to Use
 
@@ -142,17 +142,25 @@ The skill will:
 
 ```
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-| REQUIRED PHASE   | --> | OPTIONAL PHASE   | --> | CONSTITUTION     | --> | OUTPUT PHASE     |
-| - Project name   |     | - Design system  |     | - Vision/purpose |     | - Write YAML     |
-| - Purpose        |     | - Data governance|     | - Target users   |     | - Create dirs    |
-| - Primary stack  |     | - Custom SME     |     | - Core principles|     | - Save docs      |
-└──────────────────┘     └──────────────────┘     | - Boundaries     |     | - Show summary   |
-                                                  | - Success metrics|     └──────────────────┘
-                                                  | - Review/approve |
+| PHASE 0          | --> | PHASE 1          | --> | PHASE 2          | --> | PHASE 3          |
+| Environment      |     | Project Basics   |     | Constitution     |     | Tech Stack       |
+| Check .parade/   |     | - Name           |     | - Vision         |     | - Framework      |
+| Check .beads/    |     | - Description    |     | - Target users   |     | - Language       |
+| Suggest npx      |     | - Repo type      |     | - Success metrics|     | - Testing        |
+└──────────────────┘     └──────────────────┘     | - Core principles|     └──────────────────┘
+                                                  | - Boundaries     |
                                                   └──────────────────┘
+         ↓                        ↓                        ↓                        ↓
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+| PHASE 4          | --> | PHASE 5          | --> | PHASE 6          | --> | PHASE 7          |
+| Governance       |     | Design System    |     | Custom Agents    |     | First Feature    |
+| - Data gov       |     | - Enable/disable |     | - Domain experts |     | Prompt /discover |
+| - Code gov       |     | - Color scheme   |     | - Agent prompts  |     | - Guide next     |
+| - Naming rules   |     | - Typography     |     | - Label mapping  |     | - Summarize      |
+└──────────────────┘     └──────────────────┘     └──────────────────┘     └──────────────────┘
 ```
 
-**Target: Complete minimal setup in under 5 minutes**
+**Target: Complete comprehensive setup in under 10 minutes**
 
 ---
 
@@ -160,17 +168,85 @@ The skill will:
 
 When this skill is invoked:
 
-1. **Run Auto-Detection** (Step 0): Check if `project.yaml` exists with pre-filled values
+1. **Phase 0: Environment Check** - Verify .parade/ and .beads/ directories exist
+2. **Run Auto-Detection**: Check if `project.yaml` exists with pre-filled values
    - If detected, display summary and skip questions for pre-filled sections
    - Store detected values in wizard state for use in later phases
-2. **Check for existing config**: If project.yaml exists but user wants to change values, offer merge/replace options
-3. **Ask questions ONE AT A TIME** (only for non-detected sections), wait for user response
-4. **Validate each response** before proceeding
-5. **Build YAML incrementally** from validated responses (merged with detected values)
-6. **Write final project.yaml** using Write tool (only update sections that changed)
-7. **Create directory scaffold** with templates
-8. **Generate coding agents** based on stack selection (detected or user-provided)
-9. **Show summary** with next steps
+3. **Phase 1: Project Basics** - Capture name, description, repo type
+4. **Phase 2: Constitution Creation** - Build comprehensive project constitution
+5. **Phase 3: Tech Stack** - Configure framework, language, testing
+6. **Phase 4: Governance Policies** - Set data and code governance rules
+7. **Phase 5: Design System** - Optional design system setup
+8. **Phase 6: Custom Agents** - Define domain-specific expert agents
+9. **Phase 7: First Feature Prompt** - Guide user to /discover
+10. **Write final project.yaml** using Write tool
+11. **Create directory scaffold** with templates
+12. **Generate agents and constitution files**
+13. **Show summary** with next steps
+
+**Important**: Ask questions ONE AT A TIME, validate each response before proceeding.
+
+---
+
+## Phase 0: Environment Check
+
+Before starting the configuration wizard, verify that the required directory structure has been created.
+
+### 0.1 Check for .parade/ Directory
+
+**Check:** Does `.parade/` directory exist at project root?
+
+```bash
+ls -d .parade/ 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**If NOT_FOUND:**
+```
+⚠️  .parade/ directory not found
+
+The .parade/ directory contains essential templates and scaffolding.
+It should be created by running:
+
+  npx parade-init
+
+This will create:
+- .parade/templates/ (agent templates, constitution template)
+- .parade/schemas/ (validation schemas)
+- Basic directory structure
+
+Would you like to:
+[1] Exit and run npx parade-init first (recommended)
+[2] Continue without .parade/ (limited functionality)
+```
+
+**If user selects [1]:** Exit skill with instructions
+**If user selects [2]:** Log warning and continue
+
+### 0.2 Check for .beads/ Directory
+
+**Check:** Does `.beads/` directory exist at project root?
+
+```bash
+ls -d .beads/ 2>/dev/null && echo "EXISTS" || echo "NOT_FOUND"
+```
+
+**If NOT_FOUND:**
+```
+Note: Beads is not yet initialized. This will be handled later in the setup process.
+```
+
+**Continue to Phase 1**
+
+### 0.3 Display Environment Summary
+
+Once checks are complete, display:
+```
+Environment Check Complete:
+- .parade/ directory: ✓ Found | ✗ Not found (limited functionality)
+- .beads/ directory: ✓ Found | ○ Will initialize later
+
+Proceeding with project configuration...
+```
 
 ---
 
@@ -191,88 +267,467 @@ When this skill is invoked:
 
 ---
 
-## Phase 2: Primary Stack (Required)
+## Phase 2: Constitution Creation (Enhanced)
 
-### 2.1 Stack Type
+Create a comprehensive project constitution defining vision, principles, and boundaries.
+
+### 2.1 Prompt for Constitution
+
+**Ask:** "Would you like to create a project constitution? This defines your app's vision, principles, and boundaries. [Y/n]"
+
+**Default:** Yes (press Enter to accept)
+
+**If user declines:** Skip to Phase 3 (Tech Stack)
+
+### 2.2 Vision Statement
+
+**Ask:** "What is the vision statement for this project? Describe in 1-2 sentences what this project aims to achieve and why it matters."
+
+**Validate:** Non-empty string, at least 20 characters
+**Example:** "Empower individuals to take control of their health through simple, privacy-first fitness tracking."
+**Store:** `constitution_vision`
+
+### 2.3 Target Users
+
+**Ask:** "Who are the target users? List the primary audience(s) for this project (comma-separated or one per line)."
+
+**Validate:** Non-empty string
+**Transform:** Format as bullet list
+**Example Input:** "Health-conscious individuals, fitness beginners, personal trainers"
+**Example Output:**
+```
+- Health-conscious individuals
+- Fitness beginners
+- Personal trainers
+```
+**Store:** `constitution_target_users`
+
+### 2.4 Success Metrics
+
+**Ask:** "How will you measure success? Define 2-4 measurable outcomes that indicate this project is successful."
+
+**Validate:** Non-empty string
+**Transform:** Format as bullet list
+**Example Input:** "Daily active users > 1000, 4.5+ app store rating, <2s load time"
+**Example Output:**
+```
+- Daily active users > 1000
+- 4.5+ app store rating
+- Page load time < 2 seconds
+```
+**Store:** `constitution_success_metrics`
+
+### 2.5 Core Principles
+
+**Ask:** "What are the core principles that guide this project? List 3-5 guiding values (comma-separated or one per line)."
+
+**Validate:** Non-empty string, at least 3 items recommended
+**Transform:** Format as bullet list
+**Example Input:** "Privacy first, Offline capable, Simple and intuitive, Data ownership"
+**Example Output:**
+```
+- Privacy first
+- Offline capable
+- Simple and intuitive
+- Data ownership
+```
+**Store:** `constitution_core_principles`
+
+### 2.6 Boundaries
+
+**Ask:** "What are the boundaries of this project? What will this project NOT do or support?"
+
+**Validate:** Non-empty string
+**Transform:** Format as bullet list
+**Example Input:** "No social features, No cloud sync required, No third-party tracking"
+**Example Output:**
+```
+- No social features
+- No cloud sync required
+- No third-party tracking
+```
+**Store:** `constitution_boundaries`
+
+### 2.7 Write Constitution File
+
+1. **Check if `.parade/templates/CONSTITUTION.md.template` exists**
+   - If exists: Read template
+   - If not exists: Use fallback inline template
+
+2. **Substitute placeholders:**
+   - `{{PROJECT_NAME}}` → project_name (from Phase 1)
+   - `{{VISION}}` → constitution_vision
+   - `{{TARGET_USERS}}` → constitution_target_users (formatted list)
+   - `{{SUCCESS_METRICS}}` → constitution_success_metrics (formatted list)
+   - `{{CORE_PRINCIPLES}}` → constitution_core_principles (formatted list)
+   - `{{BOUNDARIES}}` → constitution_boundaries (formatted list)
+
+3. **Create `docs/` directory if needed:**
+   ```bash
+   mkdir -p docs
+   ```
+
+4. **Write to `docs/CONSTITUTION.md`** using Write tool
+
+**If `docs/CONSTITUTION.md` already exists:**
+- Offer: [1] View [2] Replace (backup to `.md.bak`) [3] Skip
+- Backup logic: `cp docs/CONSTITUTION.md docs/CONSTITUTION.md.bak.TIMESTAMP`
+
+---
+
+## Phase 3: Tech Stack (Required)
+
+### 3.1 Stack Type
 **Ask:** "What type of stack? [1] Frontend [2] Backend [3] Mobile [4] Database"
 **Store:** `stack_type = "frontend"/"backend"/"mobile"/"database"`
 
-### 2.2 Framework
+### 3.2 Framework
 **Ask:** Framework options based on stack_type (Next.js, React, SwiftUI, Express, etc.)
 **Offer:** Numbered menu with "Other (specify)" option
 
-### 2.3 Language
+### 3.3 Language
 **Ask:** "Primary language? [1] TypeScript [2] JavaScript [3] Swift [4] Python [5] Go [6] Other"
 
-### 2.4 Testing Framework
+### 3.4 Testing Framework
 **Ask:** "Unit testing framework? [1] Jest [2] Vitest [3] XCTest [4] pytest [5] None [6] Other"
 
-### 2.5 Commands
+### 3.5 Commands
 **Ask:** Test, lint, and build commands
 **Offer smart defaults** based on stack type (e.g., `npm test`, `swift test`, `pytest`)
 
 ---
 
-## Phase 3: Optional Sections
+## Phase 4: Governance Policies (New/Enhanced)
 
-**Ask:** "Configure optional sections? [1] Design System [2] Data Governance [3] Custom SME [4] Additional Apps [S] Skip"
+Configure data and code governance policies for the project.
 
-### Design System (if selected)
-- Path to design docs (default: `.design/`)
-- Create starter templates? (Y/n)
-- Color scheme preference (light/dark/both)
+### 4.1 Data Governance
 
-### Custom SME Agent (if selected)
+#### 4.1.1 Auth Provider
 
-When user selects "Custom SME", collect the following information:
+**Ask:** "What authentication provider will you use? [1] Supabase [2] Firebase [3] Custom [4] None [5] Other"
 
-1. **Agent Name**
-   - **Ask:** "What should this SME agent be called? (e.g., 'fitness-domain', 'security-expert', 'compliance-sme')"
-   - **Validate:** kebab-case format, no spaces
-   - **Store:** `agent_name` and `agent_label` (same value)
+**Store:** `auth_provider = "supabase" | "firebase" | "custom" | "none" | "<other>"`
 
-2. **Domain Expertise Description**
-   - **Ask:** "Describe the domain expertise this agent should have. What area does it specialize in?"
-   - **Validate:** Non-empty string, 1-2 sentences
-   - **Store:** `domain_expertise`
+#### 4.1.2 Naming Conventions
 
-3. **Key Files and Patterns**
-   - **Ask:** "What key files, patterns, or areas of the codebase should this agent focus on when reviewing?"
-   - **Validate:** Non-empty string
-   - **Store:** `key_patterns`
+**Ask:** "Preferred naming conventions:"
 
-4. **Generate Agent File**
-   - **Read template** from `.claude/templates/custom-sme-agent.md.template`
-   - **Substitute placeholders:**
-     - `{{AGENT_NAME}}` → Agent name (formatted: "Fitness Domain Expert" from "fitness-domain")
-     - `{{AGENT_LABEL}}` → agent_label (kebab-case: "fitness-domain")
-     - `{{DOMAIN_DESCRIPTION}}` → domain_expertise
-     - `{{DOMAIN_EXPERTISE}}` → domain_expertise (detailed description)
-     - `{{KEY_PATTERNS}}` → key_patterns
-   - **Write agent file** to `.claude/agents/<agent-label>.md`
-   - **Note:** The template already includes the standardized output format (findings JSON structure, plain text recommendations/concerns)
+**Field naming:**
+- **Ask:** "Database field naming? [1] snake_case (recommended) [2] camelCase [3] PascalCase"
+- **Store:** `naming_fields = "snake_case" | "camelCase" | "PascalCase"`
 
-5. **Add to project.yaml**
-   - Add entry to `agents.custom[]` array:
-     ```yaml
-     agents:
-       custom:
-         - name: "<Agent Name>"
-           label: "<agent-label>"
-           prompt_file: ".claude/agents/<agent-label>.md"
-     ```
+**File naming:**
+- **Ask:** "File naming? [1] kebab-case (recommended) [2] camelCase [3] PascalCase"
+- **Store:** `naming_files = "kebab-case" | "camelCase" | "PascalCase"`
 
-**Important:** The `custom-sme-agent.md.template` template already includes the standardized output format, so all generated custom SME agents will automatically use the correct structure (findings as JSON with summary/strengths/weaknesses/gaps/feasibility/estimatedEffort, recommendations and concerns as plain text).
+**Date fields:**
+- **Offer smart default:** `created_at`, `updated_at` based on field naming convention
+- **Store:** `naming_dates = "created_at" | "createdAt" | etc.`
 
-**See:** `docs/project-yaml-spec.md` for full YAML structure and examples
+### 4.2 Code Governance
+
+#### 4.2.1 Linting Rules
+
+**Ask:** "Linting configuration? [1] Strict (recommended) [2] Standard [3] Relaxed [4] Custom"
+
+**Store:** `linting_mode = "strict" | "standard" | "relaxed" | "custom"`
+
+**If custom:** Ask for specific linting command
+
+#### 4.2.2 Testing Requirements
+
+**Ask:** "Minimum test coverage? [1] 80% (strict) [2] 60% (standard) [3] 40% (relaxed) [4] None"
+
+**Store:** `test_coverage_min = 80 | 60 | 40 | 0`
+
+#### 4.2.3 Review Requirements
+
+**Ask:** "Code review requirements? [1] Required for all changes [2] Required for critical files [3] Optional [4] None"
+
+**Store:** `review_requirement = "all" | "critical" | "optional" | "none"`
+
+### 4.3 Write Governance to project.yaml
+
+All governance settings are written to the `data_governance` and `code_governance` sections of `project.yaml`:
+
+```yaml
+data_governance:
+  auth_provider: "${auth_provider}"
+  naming_conventions:
+    fields: "${naming_fields}"
+    files: "${naming_files}"
+    directories: "kebab-case"
+    dates: "${naming_dates}"
+    enums: "SCREAMING_SNAKE"
+
+code_governance:
+  linting:
+    mode: "${linting_mode}"
+    command: "${lint_command}"
+  testing:
+    min_coverage: ${test_coverage_min}
+    command: "${test_command}"
+  review:
+    requirement: "${review_requirement}"
+```
 
 ---
 
-## Phase 4: Generate Configuration
+## Phase 5: Design System (Enhanced)
+
+### 5.1 Prompt for Design System
+
+**Ask:** "Would you like to set up a design system for this project? [Y/n]"
+
+**Default:** Yes (press Enter to accept)
+
+**If user declines:** Skip to Phase 6 (Custom Agents)
+
+### 5.2 Enable Design System
+
+**Set:** `design_system_enabled = true`
+**Set:** `design_system_path = ".design/"`
+
+### 5.3 Color Scheme
+
+**Ask:** "What color scheme will your design support? [1] Light only [2] Dark only [3] Both light and dark [4] Custom"
+
+**Store:** `design_color_scheme = "light" | "dark" | "both" | "custom"`
+
+### 5.4 Primary Colors
+
+**Ask:** "What are your primary brand colors? (Enter hex codes, comma-separated, e.g., #3B82F6, #10B981)"
+
+**Validate:** Hex color format `#[0-9A-Fa-f]{6}`
+**Store:** `design_primary_colors` as array
+
+**Example Input:** "#3B82F6, #10B981, #F59E0B"
+**Example Output:**
+```yaml
+design_system:
+  colors:
+    primary:
+      - "#3B82F6"
+      - "#10B981"
+      - "#F59E0B"
+```
+
+### 5.5 Typography Preferences
+
+**Ask:** "Font family preference? [1] System fonts (recommended) [2] Google Fonts [3] Custom [4] Skip"
+
+**Store:** `design_typography = "system" | "google" | "custom" | "none"`
+
+**If Google Fonts or Custom:**
+- **Ask:** "Font family name(s)? (comma-separated)"
+- **Store:** `design_font_families` as array
+
+### 5.6 Create Design System Files
+
+If design system is enabled, create starter files in `.design/`:
+
+1. **Create `.design/` directory:**
+   ```bash
+   mkdir -p .design
+   ```
+
+2. **Generate `Colors.md`** with actual content:
+   - Use colors from 5.4
+   - Include semantic colors (success, warning, error, info)
+   - Include neutral palette (gray scale)
+
+3. **Generate `Typography.md`** with actual content:
+   - Use font families from 5.5
+   - Include type scale (headings, body, captions)
+   - Include font weights and line heights
+
+4. **Generate `Components.md`** with starter patterns:
+   - Button variants
+   - Form inputs
+   - Cards
+   - Navigation
+
+**Template location:** Check for `.parade/templates/design/` templates, or use inline fallbacks
+
+**Write files using Write tool** to:
+- `.design/Colors.md`
+- `.design/Typography.md`
+- `.design/Components.md`
+
+### 5.7 Update project.yaml
+
+Add design system configuration:
+
+```yaml
+design_system:
+  enabled: true
+  path: ".design/"
+  color_scheme: "${design_color_scheme}"
+  colors:
+    primary: ${design_primary_colors}
+  typography:
+    mode: "${design_typography}"
+    families: ${design_font_families}
+  docs:
+    - ".design/Colors.md"
+    - ".design/Typography.md"
+    - ".design/Components.md"
+```
+
+---
+
+## Phase 6: Custom Agents (Enhanced)
+
+### 6.1 Prompt for Custom Agents
+
+**Ask:** "Does your project have domain-specific expertise that requires custom agents? (e.g., fitness domain, compliance, security) [Y/n]"
+
+**Default:** No (press Enter to skip)
+
+**If user declines:** Skip to Phase 7 (First Feature Prompt)
+
+### 6.2 Custom Agent Definition Loop
+
+For each custom agent the user wants to create:
+
+#### 6.2.1 Agent Name
+
+**Ask:** "What should this agent be called? Use kebab-case (e.g., 'fitness-domain', 'security-expert', 'compliance-sme')"
+
+**Validate:** kebab-case format, no spaces
+**Store:** `agent_label`
+
+**Transform to display name:** Convert kebab-case to Title Case
+- Example: "fitness-domain" → "Fitness Domain Expert"
+- **Store:** `agent_name`
+
+#### 6.2.2 Domain Expertise Description
+
+**Ask:** "Describe the domain expertise this agent should have. What area does it specialize in?"
+
+**Validate:** Non-empty string, 1-2 sentences
+**Example:** "Expert in fitness tracking algorithms, workout plan validation, and health metrics analysis."
+**Store:** `domain_expertise`
+
+#### 6.2.3 Key Patterns and Focus Areas
+
+**Ask:** "What key files, patterns, or areas of the codebase should this agent focus on when reviewing?"
+
+**Validate:** Non-empty string
+**Example:** "Workout calculation logic, health data models, fitness goal validation"
+**Store:** `key_patterns`
+
+#### 6.2.4 Generate Agent File
+
+1. **Check for template:**
+   - Try to read `.parade/templates/agents/custom-sme-agent.md.template`
+   - If not found, use inline fallback template
+
+2. **Substitute placeholders:**
+   - `{{AGENT_NAME}}` → agent_name (Title Case: "Fitness Domain Expert")
+   - `{{AGENT_LABEL}}` → agent_label (kebab-case: "fitness-domain")
+   - `{{DOMAIN_DESCRIPTION}}` → domain_expertise
+   - `{{DOMAIN_EXPERTISE}}` → domain_expertise (detailed description)
+   - `{{KEY_PATTERNS}}` → key_patterns
+
+3. **Create `.claude/agents/` directory if needed:**
+   ```bash
+   mkdir -p .claude/agents
+   ```
+
+4. **Write agent file** to `.claude/agents/<agent-label>.md` using Write tool
+
+**Note:** The template includes standardized output format (findings as JSON, recommendations/concerns as plain text)
+
+#### 6.2.5 Add to project.yaml
+
+Add entry to `agents.custom[]` array:
+
+```yaml
+agents:
+  custom:
+    - name: "${agent_name}"
+      label: "${agent_label}"
+      prompt_file: ".claude/agents/${agent_label}.md"
+```
+
+### 6.3 Repeat or Continue
+
+**Ask:** "Would you like to add another custom agent? [Y/n]"
+
+- If yes: Return to 6.2.1
+- If no: Continue to Phase 7
+
+---
+
+## Phase 7: First Feature Prompt (New)
+
+### 7.1 Prompt for First Feature
+
+**Display:**
+```
+Setup complete! Your project configuration is ready.
+
+Would you like to walk through your first feature now? This will guide you
+through the discovery process to capture a feature idea and generate a spec.
+
+[Y] Yes, let's create a feature (recommended)
+[N] No, I'll do this later
+```
+
+**Default:** Yes
+
+### 7.2 If Yes - Guide to /discover
+
+**Display:**
+```
+Great! Let's capture your first feature idea.
+
+To start the discovery process, describe your feature idea in 1-2 sentences.
+I'll use the /discover skill to:
+1. Capture your feature brief
+2. Run discovery with SME agents
+3. Generate a detailed specification
+
+What feature would you like to build?
+```
+
+**Wait for user input**, then:
+- Invoke `/discover` skill with the user's feature description
+- This transitions the user directly into the workflow
+
+### 7.3 If No - Summarize Next Steps
+
+**Display:**
+```
+No problem! Here's what you can do next:
+
+1. **Start building a feature:**
+   Run `/discover` and describe your feature idea
+
+2. **Review your constitution:**
+   Open `docs/CONSTITUTION.md` to review your project's guiding principles
+
+3. **Review project config:**
+   Open `project.yaml` to review or manually adjust settings
+
+4. **Add more custom agents:**
+   Run `/init-project` again to add more domain experts
+
+5. **Review generated agents:**
+   Check `.claude/agents/` for coding agents tailored to your stack
+
+Need help? Run `/help` for available commands.
+```
+
+---
+
+## Generate Configuration and Scaffold
 
 ### YAML Generation
 
-Use Write tool to create `project.yaml` at repository root.
+Use Write tool to create `project.yaml` at repository root with all collected values.
 
 **Single-app structure:**
 ```yaml
@@ -281,7 +736,11 @@ project:
   name: "${project_name}"
   description: "${project_description}"
 vision:
-  purpose: "${project_description}"
+  purpose: "${constitution_vision}"
+  target_users: "${constitution_target_users}"
+  success_metrics: "${constitution_success_metrics}"
+  core_principles: "${constitution_core_principles}"
+  boundaries: "${constitution_boundaries}"
 stacks:
   ${stack_type}:
     framework: "${framework}"
@@ -295,24 +754,42 @@ stacks:
 design_system:
   enabled: ${design_system_enabled}
   path: "${design_system_path}"
-  docs: []
+  color_scheme: "${design_color_scheme}"
+  colors:
+    primary: ${design_primary_colors}
+  typography:
+    mode: "${design_typography}"
+    families: ${design_font_families}
+  docs:
+    - ".design/Colors.md"
+    - ".design/Typography.md"
+    - ".design/Components.md"
 data_governance:
-  auth_provider: ""
+  auth_provider: "${auth_provider}"
   naming_conventions:
-    dates: "created_at"
-    enums: "SCREAMING_SNAKE"
-    fields: "snake_case"
-    files: "kebab-case"
+    fields: "${naming_fields}"
+    files: "${naming_files}"
     directories: "kebab-case"
+    dates: "${naming_dates}"
+    enums: "SCREAMING_SNAKE"
+code_governance:
+  linting:
+    mode: "${linting_mode}"
+    command: "${lint_command}"
+  testing:
+    min_coverage: ${test_coverage_min}
+    command: "${test_command}"
+  review:
+    requirement: "${review_requirement}"
 agents:
-  custom: []
+  custom: ${custom_agents_array}
 ```
 
 **See:** `docs/project-yaml-spec.md` for validation checklist and complete examples
 
 ---
 
-## Phase 5: Create Directory Scaffold
+## Create Directory Scaffold
 
 ### Core Directories (always created)
 ```bash
@@ -381,9 +858,9 @@ bd doctor
 
 ---
 
-## Phase 6: Generate Coding Agents
+## Generate Coding Agents
 
-After stack selection, generate stack-specific coding agents to assist with implementation tasks.
+After stack selection (Phase 3), generate stack-specific coding agents to assist with implementation tasks.
 
 ### Framework-to-Template Mapping
 
@@ -454,7 +931,7 @@ For projects with multiple stack types (e.g., full-stack apps):
 
 ---
 
-## Phase 7: Existing Configuration Handling
+## Existing Configuration Handling
 
 ### Detection
 ```bash
@@ -484,179 +961,49 @@ cp project.yaml project.yaml.bak
 
 ---
 
-## Phase 8: Constitution Generation
-
-Generate a project constitution that defines vision, principles, and boundaries.
-
-### 8.1 Prompt for Constitution Details
-
-**Ask:** "Would you like to create a project constitution? This defines your app's vision, principles, and boundaries. [Y/n]"
-
-If user declines, skip to Output phase.
-
-### 8.2 Collect Constitution Information
-
-Ask the following questions ONE AT A TIME:
-
-#### Vision/Purpose
-**Ask:** "What is the vision or purpose of this application? What problem does it solve and why does it matter?"
-**Validate:** Non-empty string, at least 20 characters
-**Store:** `constitution_purpose`
-
-#### Target Users
-**Ask:** "Who are the target users? Describe your primary audience and their needs."
-**Validate:** Non-empty string
-**Store:** `constitution_target_users`
-
-#### Core Principles
-**Ask:** "What are the core principles that guide this project? List 3-5 principles (one per line or comma-separated)."
-**Validate:** Non-empty string
-**Transform:** Format as bullet list if not already
-**Store:** `constitution_core_principles`
-
-#### Technical Boundaries
-**Ask:** "What are the technical boundaries or constraints? (e.g., offline-first, no external APIs, specific platforms only)"
-**Validate:** Non-empty string
-**Transform:** Format as bullet list if not already
-**Store:** `constitution_technical_boundaries`
-
-#### Success Metrics
-**Ask:** "How will you measure success? Define 2-4 key metrics."
-**Validate:** Non-empty string
-**Transform:** Format as bullet list if not already
-**Store:** `constitution_success_metrics`
-
-### 8.3 Generate Constitution from Template
-
-1. **Read template** from `.claude/templates/CONSTITUTION.md.template`
-2. **Substitute placeholders:**
-   - `{{PROJECT_NAME}}` → project_name (from Phase 1)
-   - `{{PURPOSE}}` → constitution_purpose
-   - `{{TARGET_USERS}}` → constitution_target_users
-   - `{{CORE_PRINCIPLES}}` → constitution_core_principles (formatted as bullet list)
-   - `{{TECHNICAL_BOUNDARIES}}` → constitution_technical_boundaries (formatted as bullet list)
-   - `{{SUCCESS_METRICS}}` → constitution_success_metrics (formatted as bullet list)
-
-### 8.4 Review and Approve Flow
-
-**Present the generated constitution:**
-```
-## Generated Constitution
-
-[Display full generated CONSTITUTION.md content]
-
----
-
-Please review the constitution above.
-
-[1] Approve - Save to docs/CONSTITUTION.md
-[2] Edit - Make changes before saving
-[3] Skip - Don't create a constitution
-```
-
-#### If Approved (Option 1)
-1. Create `docs/` directory if it doesn't exist: `mkdir -p docs`
-2. Write constitution to `docs/CONSTITUTION.md` using Write tool
-3. Continue to Output phase
-
-#### If Edit Requested (Option 2)
-**Ask:** "Which section would you like to edit? [1] Purpose [2] Target Users [3] Core Principles [4] Technical Boundaries [5] Success Metrics [6] All sections"
-
-Based on selection:
-- **Specific section (1-5):** Re-prompt for that section only, then regenerate and present for review again
-- **All sections (6):** Re-run all prompts from 8.2
-
-After edits, return to 8.4 (present for review again).
-
-#### If Skipped (Option 3)
-- Log: "Constitution skipped by user"
-- Continue to Output phase
-
-### 8.5 Constitution File Handling
-
-**If `docs/CONSTITUTION.md` exists:**
-**Offer options:**
-1. **View** - Display current constitution
-2. **Replace** - Backup to `CONSTITUTION.md.bak` and create new
-3. **Skip** - Keep existing constitution
-
-**Backup Logic:**
-```bash
-# Always backup before replace
-cp docs/CONSTITUTION.md docs/CONSTITUTION.md.bak
-# If backup exists, create timestamped: CONSTITUTION.md.bak.20260102_143000
-```
-
-### Formatting Helpers
-
-**Bullet List Transformation:**
-When user provides comma-separated or plain text lists, transform to markdown bullet list:
-
-Input: `"Performance first, User privacy, Offline capable"`
-Output:
-```
-- Performance first
-- User privacy
-- Offline capable
-```
-
-Input: `"Must work offline\nNo cloud dependencies\nSingle binary deployment"`
-Output:
-```
-- Must work offline
-- No cloud dependencies
-- Single binary deployment
-```
-
----
-
 ## Output
 
 ### Success Summary
+
+Display at the end of the wizard (only if NOT transitioning to /discover):
+
 ```
 ## Project Initialized Successfully!
 
 ### Files Created
-- project.yaml (project configuration)
-- .claude/CLAUDE.md (project instructions)
-- .claude/agents/swift-agent.md (Swift coding agent)
+- project.yaml (comprehensive project configuration)
+- .claude/CLAUDE.md (project-specific instructions)
+- .claude/agents/typescript-agent.md (TypeScript coding agent) [example]
 - .claude/agents/fitness-domain.md (custom SME) [if created]
 - docs/CONSTITUTION.md (project constitution) [if created]
+- .design/Colors.md (color palette) [if design system enabled]
+- .design/Typography.md (typography system) [if design system enabled]
+- .design/Components.md (component patterns) [if design system enabled]
 
-**Note:** All custom SME agents are generated with the standardized output format, ensuring consistent structure across all reviews (findings as JSON with summary/strengths/weaknesses/gaps/feasibility/estimatedEffort, recommendations and concerns as plain text).
+**Note:** All custom SME agents use the standardized output format (findings as JSON, recommendations/concerns as plain text).
 
 ### Directories Created
-- .claude/skills/, .claude/agents/, .claude/schemas/, .beads/, .design/
+- .claude/skills/, .claude/agents/, .claude/schemas/, .claude/templates/
+- .beads/ (task management)
+- .design/ [if design system enabled]
 - docs/ [if constitution created]
 
 ### Configuration Summary
-Project: MyAwesomeApp
-Stack: SwiftUI / Swift / XCTest
-Design System: Enabled
-Coding Agents: swift-agent
-Custom SMEs: fitness-domain
-Constitution: Created [or Skipped]
+Project: ${project_name}
+Vision: ${constitution_vision} [if created]
+Stack: ${framework} / ${language} / ${test_framework}
+Auth Provider: ${auth_provider}
+Design System: ${design_system_enabled ? "Enabled" : "Disabled"}
+Governance: Data (${naming_fields} fields) + Code (${linting_mode} linting)
+Coding Agents: ${generated_agents}
+Custom SMEs: ${custom_agents} [if created]
+Constitution: ${constitution_created ? "Created" : "Skipped"}
 
 ---
 
 ## What's Next?
 
-1. **Start building a feature:**
-   Run `/create-brief` to capture your first feature idea
-
-2. **Review your config:**
-   Open `project.yaml` to review or manually adjust settings
-
-3. **Review your constitution:**
-   Open `docs/CONSTITUTION.md` to review your project's guiding principles
-
-4. **Add more agents:**
-   Run `/init-project` again to add more SME agents
-
-5. **Review generated agents:**
-   Check `.claude/agents/` for coding agents tailored to your stack
-
-Need help? Run `/help` for available commands.
+[Content from Phase 7.3 - Next Steps]
 ```
 
 ---
@@ -665,16 +1012,31 @@ Need help? Run `/help` for available commands.
 
 For `--minimal` flag:
 
-**Ask only 6 questions:**
+**Phase 0:** Environment check (always runs)
+
+**Phase 1:** Project basics (3 questions)
 1. Project name
 2. Project description (1-2 sentences)
-3. Stack type [1-4]
-4. Framework (based on stack)
-5. Primary language [1-6]
-6. Test command (with smart default)
+3. Repository type [1-2]
 
-**Generate minimal YAML**, create directories, show success message.
-**Total time: ~3-4 minutes**
+**Phase 2:** Skip constitution (auto-skip with --minimal)
+
+**Phase 3:** Tech stack (4 questions)
+1. Stack type [1-4]
+2. Framework (based on stack)
+3. Primary language [1-6]
+4. Test command (with smart default)
+
+**Phase 4:** Skip governance (use smart defaults)
+
+**Phase 5:** Skip design system (auto-skip with --minimal)
+
+**Phase 6:** Skip custom agents (auto-skip with --minimal)
+
+**Phase 7:** Skip first feature prompt (auto-skip with --minimal)
+
+**Generate minimal YAML** with smart defaults, create directories, show success message.
+**Total time: ~3-4 minutes** (7 questions + environment check)
 
 ---
 

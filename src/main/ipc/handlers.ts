@@ -10,6 +10,7 @@ import { fileWatcherService } from '../services/fileWatcher';
 import { docsService } from '../services/docs';
 import { telemetryService } from '../services/telemetry';
 import { terminalLauncherService } from '../services/terminalLauncher';
+import { setupStatusService } from '../services/setupStatus';
 import type {
   BeadId,
   CreateIssueParams,
@@ -316,5 +317,14 @@ export function registerIpcHandlers() {
   // Terminal: Launch terminal with command
   ipcMain.handle(IPC_CHANNELS.TERMINAL.LAUNCH, async (_, opts: { workingDir: string; command: string }) => {
     return terminalLauncherService.launch(opts.workingDir, opts.command);
+  });
+
+  // ==========================================================================
+  // Project Setup Status handlers
+  // ==========================================================================
+
+  // Project: Check setup status
+  ipcMain.handle(IPC_CHANNELS.PROJECT_CHECK_SETUP_STATUS, async (_, projectPath: string) => {
+    return setupStatusService.checkSetupStatus(projectPath);
   });
 }

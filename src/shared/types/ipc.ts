@@ -24,9 +24,13 @@ import type {
   AgentLabel,
 } from './telemetry';
 import type { DocFile as DocFileType, DocsListResult, DocsReadResult } from '../../main/services/docs';
+import type { SetupStatusResult, SetupStatus } from '../../main/services/setupStatus';
 
 // Re-export docs types for renderer usage
 export type { DocFileType as DocFile, DocsListResult, DocsReadResult };
+
+// Re-export setup status types for renderer usage
+export type { SetupStatusResult, SetupStatus };
 
 // Re-export telemetry types for renderer usage
 export type {
@@ -93,6 +97,7 @@ export const IPC_CHANNELS = {
   PROJECT_READ_CONFIG: 'project:readConfig',
   PROJECT_WRITE_CONFIG: 'project:writeConfig',
   PROJECT_CREATE_SCAFFOLD: 'project:createScaffold',
+  PROJECT_CHECK_SETUP_STATUS: 'project:checkSetupStatus',
 
   // MCP operations
   MCP: {
@@ -382,7 +387,7 @@ export interface ElectronAPI {
   project: {
     readConfig: (projectPath: string) => Promise<{ config: ProjectConfig | null; error?: string }>;
     writeConfig: (projectPath: string, config: ProjectConfig) => Promise<WriteConfigResult>;
-    createScaffold: (options: ScaffoldOptions) => Promise<CreateScaffoldResult>;
+    checkSetupStatus: (projectPath: string) => Promise<SetupStatusResult>;
   };
   mcp: {
     detect: (projectPath: string) => Promise<MCPDetectResult>;

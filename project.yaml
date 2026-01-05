@@ -62,3 +62,8 @@ agents:
 
 workflow:
   tdd_enabled: true
+  max_parallel_tasks: 3  # Limit concurrent agents to prevent context overflow
+  retrospective:
+    capture_metrics: true
+    capture_token_estimates: true
+    prompt_on_debug: true

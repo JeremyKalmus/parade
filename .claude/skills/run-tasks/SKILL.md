@@ -36,7 +36,22 @@ Execute implementation tasks through coordinated sub-agents with optional TDD wo
 
 ## Process Overview
 
-### Step 0: Check TDD Configuration
+### Step 0a: Path Detection
+
+Determine the location of discovery.db to support both new `.parade/` structure and legacy project root:
+
+```bash
+# Path detection for .parade/ structure
+if [ -f ".parade/discovery.db" ]; then
+  DISCOVERY_DB=".parade/discovery.db"
+else
+  DISCOVERY_DB="./discovery.db"
+fi
+```
+
+All subsequent database operations in this skill use `$DISCOVERY_DB` instead of hardcoded `discovery.db`.
+
+### Step 0b: Check TDD Configuration
 
 Before starting task execution, check if TDD is enabled:
 
@@ -103,20 +118,45 @@ See [TDD Protocol](./docs/tdd-protocol.md) for complete gating details.
 
 Tasks can run in parallel if they don't depend on each other.
 
-From the ready work, group tasks:
-- **Batch 1**: All currently ready tasks (no deps on each other)
-- **Batch 2**: Tasks that will become ready after Batch 1
+**CRITICAL: Apply batch size limit to prevent context overflow.**
 
-Example:
+```bash
+# Check project config for max parallel tasks (default: 3)
+MAX_PARALLEL=$(grep -A1 "workflow:" project.yaml | grep "max_parallel_tasks:" | awk '{print $2}')
+MAX_PARALLEL=${MAX_PARALLEL:-3}
 ```
-Ready now (Batch 1):
+
+From the ready work, group tasks with size limit:
+- **Sub-batch 1**: First MAX_PARALLEL ready tasks
+- **Sub-batch 2**: Next MAX_PARALLEL ready tasks
+- Continue until all ready tasks are batched
+
+**Why this matters**: Each agent returns ~2-3K tokens. Running 8+ agents in parallel returns 16-24K tokens simultaneously, overwhelming context and preventing compaction.
+
+Example with MAX_PARALLEL=3:
+```
+Ready now (8 tasks):
 - bd-x7y8.1 [agent:sql]
-- bd-x7y8.3 [agent:swift]
+- bd-x7y8.2 [agent:swift]
+- bd-x7y8.3 [agent:typescript]
+- bd-x7y8.4 [agent:typescript]
+- bd-x7y8.5 [agent:sql]
+- bd-x7y8.6 [agent:swift]
+- bd-x7y8.7 [agent:typescript]
+- bd-x7y8.8 [agent:test]
 
-Blocked (future batches):
-- bd-x7y8.2 [agent:typescript] → waiting on .1
-- bd-x7y8.4 [agent:typescript] → waiting on .1, .2
+Split into sub-batches:
+- Sub-batch 1: [.1, .2, .3] → execute, wait, collect telemetry
+- Sub-batch 2: [.4, .5, .6] → execute, wait, collect telemetry
+- Sub-batch 3: [.7, .8] → execute, wait, collect telemetry
 ```
+
+**Execution pattern**:
+1. Spawn sub-batch agents in parallel
+2. Wait for ALL agents in sub-batch to complete
+3. Capture telemetry for each (see Step 4a)
+4. Proceed to next sub-batch
+5. After all sub-batches: check for newly unblocked tasks
 
 ### Step 3: Spawn Agents for Batch
 
@@ -169,6 +209,53 @@ Wait for all agents in batch to complete.
 For each agent result:
 - **PASS**: Continue to verification
 - **FAIL**: Handle based on task type and mode
+
+### Step 4a: Capture Telemetry (REQUIRED)
+
+**After each agent completes, IMMEDIATELY capture telemetry to discovery.db.**
+
+This is critical for retrospective analysis and debugging workflow issues.
+
+1. **Parse agent output** - Look for compact JSON on last line:
+```json
+{"s":"s","t":1200,"m":["src/file.ts"],"c":["src/new.ts"]}
+```
+
+2. **Record to database** - Execute this SQL for EACH completed agent:
+```sql
+INSERT INTO agent_telemetry (
+  id, task_id, epic_id, agent_type, status, token_count,
+  duration_ms, files_modified, files_created, error_type,
+  error_summary, debug_attempts, started_at, completed_at
+) VALUES (
+  'tel-' || hex(randomblob(4)),  -- Generate unique ID
+  '<task-id>',
+  '<epic-id>',
+  '<agent-type>',                 -- e.g., 'typescript', 'swift', 'sql'
+  CASE '<status>' WHEN 's' THEN 'PASS' WHEN 'f' THEN 'FAIL' ELSE 'UNKNOWN' END,
+  <token_count>,                  -- From 't' field in JSON
+  <duration_ms>,                  -- Calculate from start/end time
+  '<files_modified_json>',        -- From 'm' field
+  '<files_created_json>',         -- From 'c' field
+  '<error_type>',                 -- From 'e' field if present
+  '<error_summary>',              -- From 'x' field if present
+  0,                              -- debug_attempts (increment on retries)
+  '<started_at>',
+  datetime('now')
+);
+```
+
+3. **Compact Output Key Reference**:
+| Key | Meaning | Values |
+|-----|---------|--------|
+| `s` | status | `"s"` (success), `"f"` (fail), `"b"` (blocked) |
+| `t` | tokens | estimated token count used |
+| `m` | modified | array of modified file paths |
+| `c` | created | array of created file paths |
+| `e` | error | `"t"` (test), `"b"` (build), `"o"` (timeout) |
+| `x` | error msg | truncated error message (max 200 chars) |
+
+**If agent output lacks JSON**: Record with status='UNKNOWN', token_count=NULL. This indicates agents need prompt updates.
 
 ### Step 5: Run Verification
 
@@ -407,7 +494,7 @@ bd close <epic-id>
 
 5. **Update brief status in discovery.db:**
 ```bash
-sqlite3 discovery.db "UPDATE briefs SET status = 'completed', updated_at = datetime('now') WHERE exported_epic_id = '<epic-id>';"
+sqlite3 "$DISCOVERY_DB" "UPDATE briefs SET status = 'completed', updated_at = datetime('now') WHERE exported_epic_id = '<epic-id>';"
 ```
 
 **Option 2: With retrospective:**
