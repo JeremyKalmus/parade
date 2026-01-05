@@ -1,6 +1,7 @@
 // TaskCard - Compact task card for swimlane layout
 
 import type { Issue } from '../../../shared/types/beads';
+import { getTypeDisplay } from '@renderer/lib/iconMap';
 
 interface TaskCardProps {
   task: Issue;
@@ -11,6 +12,7 @@ interface TaskCardProps {
 export function TaskCard({ task, isSelected, onClick }: TaskCardProps) {
   // Extract short ID (e.g., "bd-a1b2.3" -> "a1b2.3")
   const shortId = task.id.replace('bd-', '');
+  const typeDisplay = getTypeDisplay(task.labels);
 
   return (
     <button
@@ -23,8 +25,13 @@ export function TaskCard({ task, isSelected, onClick }: TaskCardProps) {
         }
       `}
     >
-      {/* Title with ID prefix */}
+      {/* Title with ID prefix and type icon */}
       <h4 className="text-xs font-medium text-slate-200 line-clamp-2 leading-tight">
+        {typeDisplay && (
+          <span className={`${typeDisplay.color} mr-1`} title={`Type: ${task.labels?.find(l => l.startsWith('type:'))?.replace('type:', '')}`}>
+            {typeDisplay.icon}
+          </span>
+        )}
         <span className="text-sky-400 font-mono">{shortId}</span>{' '}
         {task.title}
       </h4>

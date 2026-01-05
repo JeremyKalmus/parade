@@ -3,7 +3,7 @@ import type { Issue, IssueStatus } from '../../../shared/types/beads';
 import { Card } from '@renderer/components/ui/card';
 import { Badge } from '@renderer/components/ui/badge';
 import { Progress } from '@renderer/components/ui/progress';
-import { StatusIcons } from '@renderer/lib/iconMap';
+import { StatusIcons, getTypeDisplay } from '@renderer/lib/iconMap';
 import { X, Loader2, GitBranch } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -40,6 +40,7 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
 
 function ChildTaskItem({ task }: { task: Issue }) {
   const config = STATUS_CONFIG[task.status] || STATUS_CONFIG.open;
+  const typeDisplay = getTypeDisplay(task.labels);
 
   return (
     <Card className={`p-3 ${config.bgColor} border-slate-700`}>
@@ -58,7 +59,14 @@ function ChildTaskItem({ task }: { task: Issue }) {
               </Badge>
             ))}
           </div>
-          <h4 className="text-sm font-medium text-slate-100 mt-0.5">{task.title}</h4>
+          <h4 className="text-sm font-medium text-slate-100 mt-0.5">
+            {typeDisplay && (
+              <span className={`${typeDisplay.color} mr-1`} title={`Type: ${task.labels?.find(l => l.startsWith('type:'))?.replace('type:', '')}`}>
+                {typeDisplay.icon}
+              </span>
+            )}
+            {task.title}
+          </h4>
           {task.description && (
             <p className="text-xs text-slate-400 mt-1 line-clamp-2">{task.description}</p>
           )}

@@ -159,4 +159,30 @@ export const IconMap = {
   navigation: NavigationIcons,
 } as const;
 
+/**
+ * Type label configuration for task categorization
+ * Maps type:* labels to icon and color for visual distinction
+ */
+export const TypeLabelConfig: Record<string, { icon: string; color: string }> = {
+  bug: { icon: '🐛', color: 'text-red-400' },
+  feature: { icon: '✨', color: 'text-green-400' },
+  enhancement: { icon: '💡', color: 'text-yellow-400' },
+  chore: { icon: '🔧', color: 'text-slate-400' },
+  docs: { icon: '📝', color: 'text-blue-400' },
+};
+
+const DEFAULT_TYPE_DISPLAY = { icon: '📌', color: 'text-slate-400' };
+
+/**
+ * Extract type display info from labels array
+ * Looks for type:* labels and returns corresponding icon/color
+ */
+export function getTypeDisplay(labels: string[] = []): { icon: string; color: string } | null {
+  const typeLabel = labels.find((l) => l.startsWith('type:'));
+  if (!typeLabel) return null;
+
+  const type = typeLabel.replace('type:', '');
+  return TypeLabelConfig[type] || DEFAULT_TYPE_DISPLAY;
+}
+
 export default IconMap;

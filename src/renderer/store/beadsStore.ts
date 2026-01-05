@@ -19,6 +19,7 @@ interface BeadsState {
   childTasks: Issue[];
   isLoading: boolean;
   isLoadingChildren: boolean;
+  isSwitchingProject: boolean;
   error: string | null;
 
   // Batch state
@@ -82,6 +83,7 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
   childTasks: [],
   isLoading: false,
   isLoadingChildren: false,
+  isSwitchingProject: false,
   error: null,
 
   // Initial state - Batch
@@ -142,7 +144,7 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
       return;
     }
 
-    set({ activeProjectId: projectId, isLoading: true, error: null });
+    set({ activeProjectId: projectId, isSwitchingProject: true, error: null });
 
     try {
       // Update the beads project path in main process
@@ -159,11 +161,14 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
 
       // Fetch issues for the new project
       await get().fetchIssues();
+
+      // Project switch complete
+      set({ isSwitchingProject: false });
     } catch (err) {
       console.error('Failed to switch project:', err);
       set({
         error: err instanceof Error ? err.message : 'Failed to switch project',
-        isLoading: false,
+        isSwitchingProject: false,
       });
     }
   },
@@ -490,7 +495,7 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
                 console.error('Error fetching issues with deps in real-time update:', err);
               });
           }
-        }, 100); // 100ms delay to let file writes complete
+        }, 250); // 250ms delay to let file writes complete and reduce flickering
       } catch (err) {
         console.error('Error in beads change handler:', err);
       }

@@ -329,7 +329,7 @@ function PipelineView() {
       </div>
       <div className="w-96 border-l border-slate-800 overflow-y-auto">
         <BriefDetailView />
-        <div className="border-t border-slate-800">
+        <div className="border-t border-slate-800 p-4">
           <AgentActivityPanel />
         </div>
       </div>
@@ -436,7 +436,7 @@ function KanbanView() {
 // Main App component
 export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
-  const { projects, activeProjectId, setActiveProject, isLoading } = useBeadsStore();
+  const { projects, activeProjectId, setActiveProject, isSwitchingProject } = useBeadsStore();
 
   // Initialize stores on app startup - runs only once
   useEffect(() => {
@@ -592,7 +592,7 @@ export default function App() {
       {/* Main content */}
       <main className="flex-1 overflow-hidden relative">
         {/* Loading overlay during project switch */}
-        {isLoading && (
+        {isSwitchingProject && (
           <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center z-50">
             <div className="flex flex-col items-center gap-2">
               <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />

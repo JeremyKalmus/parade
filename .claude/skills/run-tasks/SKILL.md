@@ -19,6 +19,15 @@ Execute implementation tasks through coordinated sub-agents with optional TDD wo
 
 **Key guarantee**: The stop hook ensures ALL tasks complete before exit. Claude queries beads state each cycle rather than tracking in context, enabling token-efficient persistence.
 
+## Telemetry Capture
+
+**Required after each agent completes:**
+1. Parse agent output JSON (last line): `{"s":"s","t":1200,"m":[...],"c":[...]}`
+2. Insert into agent_telemetry table immediately
+3. Continue even if telemetry insert fails (log warning, don't block)
+
+This enables retrospective analysis via `/retro`. Telemetry MUST be captured after EACH agent completes, not just at the end of the batch.
+
 ## When to Use
 
 - After `/approve-spec` has created tasks
@@ -210,18 +219,29 @@ For each agent result:
 - **PASS**: Continue to verification
 - **FAIL**: Handle based on task type and mode
 
-### Step 4a: Capture Telemetry (REQUIRED)
+### Step 4a: Capture Telemetry (REQUIRED AFTER EACH AGENT)
 
-**After each agent completes, IMMEDIATELY capture telemetry to discovery.db.**
+**CRITICAL: Telemetry MUST be captured immediately after EACH agent completes, not just at batch end.**
 
-This is critical for retrospective analysis and debugging workflow issues.
+This is essential for:
+- Retrospective analysis via `/retro`
+- Debugging workflow bottlenecks
+- Tracking agent performance metrics
+- Understanding failure patterns
+
+**Failure Impact**: If telemetry is not captured:
+- `/retro` cannot analyze execution patterns
+- Workflow improvements cannot be informed by data
+- Bottlenecks go undetected
+
+#### Process
 
 1. **Parse agent output** - Look for compact JSON on last line:
 ```json
 {"s":"s","t":1200,"m":["src/file.ts"],"c":["src/new.ts"]}
 ```
 
-2. **Record to database** - Execute this SQL for EACH completed agent:
+2. **Record to database IMMEDIATELY** - Execute this SQL for EACH completed agent:
 ```sql
 INSERT INTO agent_telemetry (
   id, task_id, epic_id, agent_type, status, token_count,
@@ -245,7 +265,13 @@ INSERT INTO agent_telemetry (
 );
 ```
 
-3. **Compact Output Key Reference**:
+3. **Error Handling** - If telemetry insert fails:
+   - Log a warning with the error details
+   - **Continue with workflow** (do not block)
+   - The task completion will still proceed normally
+   - This ensures workflow robustness even if instrumentation fails
+
+4. **Compact Output Key Reference**:
 | Key | Meaning | Values |
 |-----|---------|--------|
 | `s` | status | `"s"` (success), `"f"` (fail), `"b"` (blocked) |
@@ -256,6 +282,13 @@ INSERT INTO agent_telemetry (
 | `x` | error msg | truncated error message (max 200 chars) |
 
 **If agent output lacks JSON**: Record with status='UNKNOWN', token_count=NULL. This indicates agents need prompt updates.
+
+**Checklist for Step 4a:**
+- [ ] Agent completed and returned result
+- [ ] JSON parsed from last line of output
+- [ ] SQL insert executed (immediately, before verification)
+- [ ] If insert fails, logged warning and continued (not blocked)
+- [ ] Workflow proceeds to Step 5 (verification)
 
 ### Step 5: Run Verification
 
