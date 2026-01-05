@@ -35,8 +35,8 @@ interface BeadsState {
   getActiveProject: () => Project | null;
 
   // Issue Actions
-  fetchIssues: () => Promise<void>;
-  fetchIssuesWithDeps: () => Promise<void>;
+  fetchIssues: (options?: { silent?: boolean }) => Promise<void>;
+  fetchIssuesWithDeps: (options?: { silent?: boolean }) => Promise<void>;
   setFilters: (filters: ListFilters) => void;
   selectIssue: (id: BeadId | null) => void;
   selectEpic: (epic: Issue | null) => void;
@@ -50,6 +50,9 @@ interface BeadsState {
   toggleBatchCollapse: (batchNumber: number) => void;
   loadCollapsedBatches: () => void;
   saveCollapsedBatches: () => void;
+
+  // Event subscription
+  subscribeToChanges: () => () => void; // Returns unsubscribe function
 }
 
 // localStorage key for collapsed batches
@@ -155,13 +158,14 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
   },
 
   // Issue Actions
-  fetchIssues: async () => {
+  fetchIssues: async (options?: { silent?: boolean }) => {
     const { activeProjectId, projects } = get();
+    const silent = options?.silent ?? false;
 
     // If no active project is selected, don't fetch
     // This supports the "all projects" view where we'd show nothing or aggregate
     if (!activeProjectId) {
-      set({ issues: [], isLoading: false });
+      if (!silent) set({ issues: [], isLoading: false });
       return;
     }
 
@@ -176,7 +180,11 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
       return;
     }
 
-    set({ isLoading: true, error: null });
+    // Only show loading indicator for non-silent fetches (e.g., project switch)
+    // Silent fetches are for real-time updates and shouldn't show the overlay
+    if (!silent) {
+      set({ isLoading: true, error: null });
+    }
     try {
       const issues = await beads.list(get().filters);
       set({ issues, isLoading: false });
@@ -188,11 +196,12 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
     }
   },
 
-  fetchIssuesWithDeps: async () => {
+  fetchIssuesWithDeps: async (options?: { silent?: boolean }) => {
     const { activeProjectId, projects } = get();
+    const silent = options?.silent ?? false;
 
     if (!activeProjectId) {
-      set({ issuesWithDeps: [], isLoadingBatches: false });
+      if (!silent) set({ issuesWithDeps: [], isLoadingBatches: false });
       return;
     }
 
@@ -201,7 +210,10 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
       return;
     }
 
-    set({ isLoadingBatches: true });
+    // Only show loading indicator for non-silent fetches
+    if (!silent) {
+      set({ isLoadingBatches: true });
+    }
     try {
       const issuesWithDeps = await beads.getAllWithDependencies();
       set({ issuesWithDeps: issuesWithDeps as TaskWithDeps[], isLoadingBatches: false });
@@ -244,17 +256,32 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
   },
 
   updateIssueStatus: async (id, status) => {
+    // Get previous status for rollback
+    const previousIssue = get().issues.find((i) => i.id === id);
+    const previousStatus = previousIssue?.status;
+
+    // Optimistic update - update UI immediately before API call
+    set((state) => ({
+      issues: state.issues.map((issue) =>
+        issue.id === id ? { ...issue, status } : issue
+      ),
+    }));
+
     try {
       await beads.update(id, { status });
-      // Optimistic update
-      set((state) => ({
-        issues: state.issues.map((issue) =>
-          issue.id === id ? { ...issue, status } : issue
-        ),
-      }));
+      // Success - state already reflects the change
     } catch (err) {
-      // Refresh to get actual state
-      get().fetchIssues();
+      // Rollback to previous state on failure
+      if (previousStatus) {
+        set((state) => ({
+          issues: state.issues.map((issue) =>
+            issue.id === id ? { ...issue, status: previousStatus } : issue
+          ),
+        }));
+      } else {
+        // If we don't have previous state, refresh from server
+        get().fetchIssues();
+      }
       throw err;
     }
   },
@@ -314,5 +341,25 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
     } catch (err) {
       console.error('Failed to save collapsed batches:', err);
     }
+  },
+
+  // Event subscription for real-time updates
+  subscribeToChanges: () => {
+    const unsubscribe = window.electron.events.onBeadsChange(() => {
+      // Refresh data when .beads/ files change
+      // Use silent mode to avoid showing the "switching project" overlay
+      const { fetchIssues, fetchIssuesWithDeps, computeBatchesForEpic, selectedEpic } = get();
+
+      fetchIssues({ silent: true });
+
+      // If an epic is selected, also refresh issues with dependencies and recompute batches
+      if (selectedEpic) {
+        fetchIssuesWithDeps({ silent: true }).then(() => {
+          // Recompute batches after deps are updated
+          computeBatchesForEpic(selectedEpic.id);
+        });
+      }
+    });
+    return unsubscribe;
   },
 }));

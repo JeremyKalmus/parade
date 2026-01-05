@@ -27,14 +27,14 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): T 
   }) as T;
 }
 
-// Debounced IPC event senders (300ms to coalesce rapid file changes)
+// Debounced IPC event senders (150ms to coalesce rapid file changes - reduced from 300ms)
 const sendDiscoveryChange = debounce(() => {
   mainWindow?.webContents.send(IPC_CHANNELS.EVENTS.DISCOVERY_CHANGED);
-}, 300);
+}, 150);
 
 const sendBeadsChange = debounce(() => {
   mainWindow?.webContents.send(IPC_CHANNELS.EVENTS.BEADS_CHANGED);
-}, 300);
+}, 150);
 
 /**
  * Get the discovery.db path with fallback support

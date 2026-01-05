@@ -33,5 +33,13 @@ out/
 .docs/features/
 npm_recovery_codes.txt
 
+# Certificates and security files
+CertificateSigningRequest.certSigningRequest
+developerID_application.cer
+
 # LinkedIn posts (temporary)
 linkedin-posts/
+
+# SQLite temp files
+*.db-shm
+*.db-wal

@@ -1,13 +1,11 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { KanbanColumn } from './KanbanColumn';
 import { KanbanFilters } from './KanbanFilters';
 import { BatchGrid } from './BatchGrid';
 import { useBeadsStore } from '../../store/beadsStore';
-import type { Issue, IssueStatus, BeadId } from '../../../shared/types/beads';
-
-const COLUMNS: IssueStatus[] = ['open', 'in_progress', 'blocked', 'closed'];
+import type { Issue, BeadId } from '../../../shared/types/beads';
+import { Layers } from 'lucide-react';
 
 export function KanbanBoard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -59,27 +57,48 @@ export function KanbanBoard() {
     [searchParams, setSearchParams]
   );
 
-  // Fetch on mount and load collapsed state
+  // Fetch on mount, load collapsed state, and subscribe to real-time updates
   useEffect(() => {
     const store = useBeadsStore.getState();
     store.fetchIssues();
     store.loadCollapsedBatches();
+
+    // Subscribe to beads changes for real-time updates
+    const unsubscribe = store.subscribeToChanges();
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
   }, []); // Empty deps - run only once on mount
+
+  // Track previous epicId to detect actual changes vs background refreshes
+  const prevEpicIdRef = useRef<BeadId | null>(null);
 
   // When epic filter changes, fetch issues with deps and compute batches
   useEffect(() => {
     if (filters.epicId) {
       const store = useBeadsStore.getState();
-      // Fetch issues with dependencies
-      store.fetchIssuesWithDeps().then(() => {
-        // Compute batches for the selected epic
-        store.computeBatchesForEpic(filters.epicId!);
-      });
-      // Also set the epic as selected for the sidebar
+      const epicIdChanged = prevEpicIdRef.current !== filters.epicId;
+
+      if (epicIdChanged) {
+        // Epic actually changed - fetch with loading indicator
+        prevEpicIdRef.current = filters.epicId;
+        store.fetchIssuesWithDeps().then(() => {
+          store.computeBatchesForEpic(filters.epicId!);
+        });
+      } else {
+        // Just a background refresh of issues - recompute batches silently
+        store.computeBatchesForEpic(filters.epicId);
+      }
+
+      // Set the epic as selected for the sidebar
       const epic = issues.find((i) => i.id === filters.epicId);
       if (epic && epic.id !== selectedEpic?.id) {
         store.selectEpic(epic);
       }
+    } else {
+      prevEpicIdRef.current = null;
     }
   }, [filters.epicId, issues]);
 
@@ -92,31 +111,6 @@ export function KanbanBoard() {
   const handleToggleBatch = useCallback((batchNumber: number) => {
     useBeadsStore.getState().toggleBatchCollapse(batchNumber);
   }, []);
-
-  // Get tasks for a specific column (only show tasks, not epics) - for non-batch view
-  const getColumnIssues = useCallback(
-    (status: IssueStatus): Issue[] => {
-      return issues.filter((issue) => {
-        // Only show tasks on the kanban board (epics shown in Pipeline view)
-        if (issue.issue_type !== 'task') return false;
-        if (issue.status !== status) return false;
-
-        // Apply filters
-        if (filters.label && !issue.labels?.includes(filters.label)) return false;
-        if (filters.epicId && issue.parent !== filters.epicId) return false;
-        if (
-          filters.search &&
-          !issue.title.toLowerCase().includes(filters.search.toLowerCase()) &&
-          !issue.id.toLowerCase().includes(filters.search.toLowerCase())
-        ) {
-          return false;
-        }
-
-        return true;
-      });
-    },
-    [issues, filters]
-  );
 
   // Get unique values for filters
   const allTypes = [...new Set(issues.map((i) => i.issue_type))];
@@ -169,9 +163,6 @@ export function KanbanBoard() {
     );
   }
 
-  // Always use batch view when an epic is selected
-  const useBatchView = !!filters.epicId;
-
   return (
     <div className="h-full flex flex-col">
       {/* Filters */}
@@ -194,7 +185,7 @@ export function KanbanBoard() {
 
       {/* Board content */}
       <div className="flex-1 overflow-hidden">
-        {useBatchView ? (
+        {filters.epicId ? (
           // Batch swimlane view
           <BatchGrid
             batches={batches}
@@ -205,17 +196,19 @@ export function KanbanBoard() {
             isLoading={isLoadingBatches}
           />
         ) : (
-          // Traditional column view
-          <div className="h-full overflow-x-auto p-4">
-            <div className="flex gap-4 h-full min-w-max">
-              {COLUMNS.map((status) => (
-                <KanbanColumn
-                  key={status}
-                  status={status}
-                  issues={getColumnIssues(status)}
-                  onCardClick={handleCardClick}
-                />
-              ))}
+          // No epic selected - prompt to select one
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center max-w-md">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
+                <Layers className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-200 mb-2">
+                Select an Epic
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Choose an epic from the sidebar to view its tasks organized by execution batch.
+                Tasks are automatically grouped based on their dependencies.
+              </p>
             </div>
           </div>
         )}
