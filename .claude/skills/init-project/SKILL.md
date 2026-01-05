@@ -152,12 +152,20 @@ The skill will:
                                                   └──────────────────┘
          ↓                        ↓                        ↓                        ↓
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-| PHASE 4          | --> | PHASE 5          | --> | PHASE 6          | --> | PHASE 7          |
-| Governance       |     | Design System    |     | Custom Agents    |     | First Feature    |
-| - Data gov       |     | - Enable/disable |     | - Domain experts |     | Prompt /discover |
-| - Code gov       |     | - Color scheme   |     | - Agent prompts  |     | - Guide next     |
-| - Naming rules   |     | - Typography     |     | - Label mapping  |     | - Summarize      |
+| PHASE 3.5        | --> | PHASE 4          | --> | PHASE 5          | --> | PHASE 6          |
+| MCP Setup        |     | Governance       |     | Design System    |     | Custom Agents    |
+| - Detect config  |     | - Data gov       |     | - Enable/disable |     | - Domain experts |
+| - Recommendations|     | - Code gov       |     | - Color scheme   |     | - Agent prompts  |
+| - Configure MCPs |     | - Naming rules   |     | - Typography     |     | - Label mapping  |
 └──────────────────┘     └──────────────────┘     └──────────────────┘     └──────────────────┘
+         ↓
+┌──────────────────┐
+| PHASE 7          |
+| First Feature    |
+| Prompt /discover |
+| - Guide next     |
+| - Summarize      |
+└──────────────────┘
 ```
 
 **Target: Complete comprehensive setup in under 10 minutes**
@@ -175,14 +183,15 @@ When this skill is invoked:
 3. **Phase 1: Project Basics** - Capture name, description, repo type
 4. **Phase 2: Constitution Creation** - Build comprehensive project constitution
 5. **Phase 3: Tech Stack** - Configure framework, language, testing
-6. **Phase 4: Governance Policies** - Set data and code governance rules
-7. **Phase 5: Design System** - Optional design system setup
-8. **Phase 6: Custom Agents** - Define domain-specific expert agents
-9. **Phase 7: First Feature Prompt** - Guide user to /discover
-10. **Write final project.yaml** using Write tool
-11. **Create directory scaffold** with templates
-12. **Generate agents and constitution files**
-13. **Show summary** with next steps
+6. **Phase 3.5: MCP Setup** - Configure MCP servers for Claude Desktop (optional)
+7. **Phase 4: Governance Policies** - Set data and code governance rules
+8. **Phase 5: Design System** - Optional design system setup
+9. **Phase 6: Custom Agents** - Define domain-specific expert agents
+10. **Phase 7: First Feature Prompt** - Guide user to /discover
+11. **Write final project.yaml** using Write tool
+12. **Create directory scaffold** with templates
+13. **Generate agents and constitution files**
+14. **Show summary** with next steps
 
 **Important**: Ask questions ONE AT A TIME, validate each response before proceeding.
 
@@ -394,6 +403,330 @@ Create a comprehensive project constitution defining vision, principles, and bou
 ### 3.5 Commands
 **Ask:** Test, lint, and build commands
 **Offer smart defaults** based on stack type (e.g., `npm test`, `swift test`, `pytest`)
+
+---
+
+## Phase 3.5: MCP Setup (Optional)
+
+Configure Model Context Protocol (MCP) servers for enhanced Claude Desktop integration.
+
+### 3.5.1 Prompt for MCP Setup
+
+**Ask:** "Would you like to configure MCP servers for Claude Desktop? This enables Claude to interact with databases, file systems, and other services. [Y/n]"
+
+**Default:** Yes (press Enter to accept)
+
+**If user declines:** Skip to Phase 4 (Governance Policies)
+
+### 3.5.2 Detect Claude Desktop Config
+
+Check if Claude Desktop configuration exists:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
+**Linux:** `~/.config/claude/claude_desktop_config.json`
+
+**If config not found:**
+```
+Note: Claude Desktop configuration not found at expected location.
+
+This could mean:
+1. Claude Desktop is not installed
+2. Claude Desktop hasn't been run yet (config created on first launch)
+3. Config is at a non-standard location
+
+Options:
+[1] Create new config file (will be used when Claude Desktop is installed)
+[2] Skip MCP setup for now
+```
+
+**If user selects [1]:** Continue with MCP setup, create config directory if needed
+**If user selects [2]:** Skip to Phase 4
+
+### 3.5.3 Generate MCP Recommendations
+
+Based on stack selection from Phase 3, generate MCP recommendations using the McpRecommendationEngine patterns:
+
+**MCP Mapping (Framework → MCP Servers):**
+
+| Framework Category | Frameworks | Recommended MCPs |
+|-------------------|------------|------------------|
+| Frontend | React, Next.js, Vue, Angular, Svelte, Electron | `filesystem` |
+| Backend | Express, Fastify, NestJS, Koa | `filesystem` |
+| Database (Supabase) | Supabase | `supabase` |
+| Database (SQL) | PostgreSQL, MySQL | `postgres` |
+| Database (Local) | SQLite, Prisma | `sqlite` |
+| Mobile | Swift, Kotlin, Flutter | `filesystem` |
+| All Projects | (default) | `github` (optional) |
+
+**Priority Levels:**
+- **required**: Essential for the selected stack to function properly
+- **recommended**: Significantly enhances development experience
+- **optional**: Nice-to-have, can be added later
+
+### 3.5.4 Display Recommendations
+
+**Display:**
+```
+Based on your stack (${framework} / ${language}), I recommend these MCP servers:
+
+| Priority    | MCP Server  | Rationale                                           |
+|-------------|-------------|-----------------------------------------------------|
+| recommended | filesystem  | Enables file system operations for ${framework}    |
+|             |             | development, allowing Claude to read, write, and   |
+|             |             | manage project files.                              |
+| recommended | supabase    | Provides direct integration with Supabase database |
+|             |             | and auth services for seamless backend development.|
+| optional    | github      | Allows Claude to interact with GitHub repositories,|
+|             |             | issues, and pull requests for enhanced project     |
+|             |             | management.                                        |
+
+Select MCPs to configure:
+[1] All recommended (default)
+[2] All (including optional)
+[3] Choose individually
+[4] Skip MCP setup
+```
+
+**If user selects [3]:** Display checklist for each MCP server
+
+### 3.5.5 Configure Selected MCPs
+
+For each selected MCP server, collect required configuration:
+
+#### filesystem MCP
+```
+Configuring filesystem MCP...
+
+This MCP allows Claude to read and write files in specified directories.
+
+**Ask:** "Which directories should Claude have access to? (comma-separated paths, or '.' for current project)"
+
+**Default:** Current project directory
+**Validate:** Paths exist or will be created
+**Store:** `mcp_filesystem_paths`
+
+**Config Example:**
+{
+  "command": "npx",
+  "args": ["-y", "@anthropic/mcp-server-filesystem"],
+  "env": {
+    "ALLOWED_PATHS": "${mcp_filesystem_paths}"
+  }
+}
+```
+
+#### supabase MCP
+```
+Configuring Supabase MCP...
+
+This MCP enables direct interaction with your Supabase project.
+
+**Ask:** "Enter your Supabase project URL (e.g., https://xxx.supabase.co):"
+**Validate:** URL format, starts with https://
+**Store:** `mcp_supabase_url`
+
+**Ask:** "Enter your Supabase anon/public key:"
+**Validate:** Non-empty string
+**Sensitive:** Do not log or display after entry
+**Store:** `mcp_supabase_key`
+
+**Config Example:**
+{
+  "command": "npx",
+  "args": ["-y", "@supabase/mcp-server-supabase"],
+  "env": {
+    "SUPABASE_URL": "${mcp_supabase_url}",
+    "SUPABASE_KEY": "${mcp_supabase_key}"
+  }
+}
+```
+
+#### postgres MCP
+```
+Configuring PostgreSQL MCP...
+
+This MCP enables direct PostgreSQL database operations.
+
+**Ask:** "Enter your PostgreSQL connection URL (e.g., postgresql://user:pass@localhost:5432/db):"
+**Validate:** PostgreSQL URL format
+**Sensitive:** Do not log or display after entry
+**Store:** `mcp_postgres_url`
+
+**Config Example:**
+{
+  "command": "npx",
+  "args": ["-y", "@anthropic/mcp-server-postgres"],
+  "env": {
+    "DATABASE_URL": "${mcp_postgres_url}"
+  }
+}
+```
+
+#### sqlite MCP
+```
+Configuring SQLite MCP...
+
+This MCP provides SQLite database access.
+
+**Ask:** "Enter the path to your SQLite database file (e.g., ./database.sqlite):"
+**Validate:** Path format (file doesn't need to exist yet)
+**Store:** `mcp_sqlite_path`
+
+**Config Example:**
+{
+  "command": "npx",
+  "args": ["-y", "@anthropic/mcp-server-sqlite"],
+  "env": {
+    "DATABASE_PATH": "${mcp_sqlite_path}"
+  }
+}
+```
+
+#### github MCP
+```
+Configuring GitHub MCP...
+
+This MCP enables GitHub repository interactions.
+
+**Ask:** "Enter your GitHub personal access token (with repo scope):"
+**Validate:** Non-empty string
+**Sensitive:** Do not log or display after entry
+**Store:** `mcp_github_token`
+
+**Config Example:**
+{
+  "command": "npx",
+  "args": ["-y", "@anthropic/mcp-server-github"],
+  "env": {
+    "GITHUB_TOKEN": "${mcp_github_token}"
+  }
+}
+```
+
+### 3.5.6 Write to Claude Desktop Config
+
+**Step 1: Backup existing config (if exists)**
+
+```bash
+# Create timestamped backup
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+cp ~/Library/Application\ Support/Claude/claude_desktop_config.json \
+   ~/Library/Application\ Support/Claude/claude_desktop_config.backup-${TIMESTAMP}.json
+```
+
+**Display:** "Backed up existing config to claude_desktop_config.backup-${TIMESTAMP}.json"
+
+**Step 2: Read existing config or create new**
+
+If config exists:
+- Parse existing JSON
+- Preserve all existing settings
+- Merge new mcpServers entries
+
+If config doesn't exist:
+- Create parent directory if needed
+- Initialize with empty mcpServers object
+
+**Step 3: Add MCP server entries**
+
+For each configured MCP, add entry to `mcpServers` object:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-filesystem"],
+      "env": {
+        "ALLOWED_PATHS": "/path/to/project"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase"],
+      "env": {
+        "SUPABASE_URL": "https://xxx.supabase.co",
+        "SUPABASE_KEY": "your-anon-key"
+      }
+    }
+  }
+}
+```
+
+**Step 4: Write atomically**
+
+Write to temp file first, then rename to prevent corruption:
+
+```bash
+# Write to temp file
+echo "${config_json}" > ~/Library/Application\ Support/Claude/claude_desktop_config.json.tmp
+
+# Atomic rename
+mv ~/Library/Application\ Support/Claude/claude_desktop_config.json.tmp \
+   ~/Library/Application\ Support/Claude/claude_desktop_config.json
+```
+
+**Step 5: Handle existing server entries**
+
+If a server name already exists in config:
+
+**Ask:** "MCP server '${server_name}' already exists in config. [1] Keep existing [2] Replace with new [3] Skip this server"
+
+**Default:** Keep existing (to preserve user customizations)
+
+### 3.5.7 Display MCP Setup Summary
+
+```
+MCP Setup Complete!
+
+Configured servers:
+- filesystem: /path/to/project
+- supabase: https://xxx.supabase.co
+- github: configured
+
+Config file: ~/Library/Application Support/Claude/claude_desktop_config.json
+Backup: ~/Library/Application Support/Claude/claude_desktop_config.backup-20260105_143000.json
+
+Note: Restart Claude Desktop for changes to take effect.
+```
+
+### 3.5.8 Error Handling
+
+**Permission denied:**
+```
+Error: Cannot write to Claude Desktop config directory.
+
+Please ensure you have write permissions to:
+  ~/Library/Application Support/Claude/
+
+You can manually add MCP servers by editing claude_desktop_config.json
+or running this setup again with appropriate permissions.
+```
+
+**Invalid JSON in existing config:**
+```
+Error: Existing Claude Desktop config contains invalid JSON.
+
+Options:
+[1] View backup and continue (creates new config)
+[2] Exit and fix manually
+
+Backup location: ~/Library/Application Support/Claude/claude_desktop_config.backup-${TIMESTAMP}.json
+```
+
+**MCP server validation failed:**
+```
+Warning: Could not validate ${server_name} MCP configuration.
+
+The server entry was added but may not work correctly.
+Common issues:
+- Missing environment variables
+- Incorrect command or args
+- Network connectivity (for remote services)
+
+You can test by restarting Claude Desktop and checking for errors.
+```
 
 ---
 
@@ -1046,6 +1379,8 @@ For `--minimal` flag:
 2. Framework (based on stack)
 3. Primary language [1-6]
 4. Test command (with smart default)
+
+**Phase 3.5:** Skip MCP setup (auto-skip with --minimal)
 
 **Phase 4:** Skip governance (use smart defaults)
 
