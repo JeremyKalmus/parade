@@ -8,6 +8,7 @@ import type {
   UpdateIssueParams,
   ListFilters,
   Dependency,
+  Worktree,
 } from '../../shared/types/beads';
 
 interface ExecResult {
@@ -345,6 +346,17 @@ class BeadsService {
   async isInitialized(): Promise<boolean> {
     const result = await this.exec(['list', '--json']);
     return result.code === 0;
+  }
+
+  async worktreeList(): Promise<{ worktrees: Worktree[]; error?: string }> {
+    const result = await this.exec(['worktree', 'list', '--json']);
+
+    if (result.code !== 0) {
+      return { worktrees: [], error: result.stderr || 'Failed to list worktrees' };
+    }
+
+    const worktrees = this.parseJsonOutput<Worktree[]>(result.stdout);
+    return { worktrees: worktrees ?? [] };
   }
 }
 

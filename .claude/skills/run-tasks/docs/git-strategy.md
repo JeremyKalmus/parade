@@ -140,13 +140,20 @@ git branch -D agent/<task-id>
 
 When all tasks are complete and user confirms:
 
-```bash
-# Ensure epic branch is up to date
-git checkout epic/<epic-id>
+#### Auto-Merge Protocol
 
-# Merge epic to main (with merge commit for visibility)
+The orchestrator attempts an automatic merge with conflict detection:
+
+```bash
+# Step 1: Ensure epic branch is current
+git checkout epic/<epic-id>
+git pull origin epic/<epic-id>
+
+# Step 2: Switch to main and update
 git checkout main
 git pull origin main
+
+# Step 3: Attempt merge with --no-ff for history visibility
 git merge epic/<epic-id> --no-ff -m "Merge epic/<epic-id>: <epic title>
 
 Completed tasks:
@@ -155,13 +162,73 @@ Completed tasks:
 - <task-id>: <title>
 
 Closes: <epic-id>"
+```
 
-# Push to remote
+#### Conflict Handling
+
+If the merge fails due to conflicts:
+
+```bash
+# List conflicting files
+git diff --name-only --diff-filter=U
+```
+
+**Prompt user with options:**
+```
+⚠️ Merge conflict detected while merging epic/<epic-id> to main
+
+Conflicting files:
+- src/path/to/file1.ts
+- src/path/to/file2.ts
+
+Options:
+1. Resolve manually - Review conflicts, edit files, then continue
+2. Abort merge - Keep epic branch open for later resolution
+
+Please select an option:
+```
+
+**If user chooses to resolve manually:**
+```bash
+# After user resolves conflicts in their editor
+git add .
+git commit -m "Merge epic/<epic-id>: <epic title> (resolved conflicts)"
+```
+
+**If user chooses to abort:**
+```bash
+git merge --abort
+# Epic branch remains open for future resolution
+```
+
+#### Push & Cleanup
+
+After successful merge:
+
+```bash
+# Push merged main to remote
 git push origin main
 
-# Cleanup epic branch
+# Delete epic branch locally
 git branch -d epic/<epic-id>
+
+# Delete epic branch remotely
 git push origin --delete epic/<epic-id>
+```
+
+#### Worktree Cleanup
+
+Ensure all task worktrees are removed:
+
+```bash
+# List any remaining worktrees
+git worktree list
+
+# Remove orphaned worktrees
+git worktree prune
+
+# Verify no agent branches remain
+git branch | grep "agent/"
 ```
 
 ---
@@ -400,11 +467,20 @@ fi
 6. REPEAT
    Steps 2-5 for each batch
 
-7. EPIC COMPLETE
-   epic/<epic-id> → main (--no-ff merge)
-   Push main, cleanup epic branch
+7. EPIC COMPLETE (Auto-Merge)
+   a. Pull latest epic/<epic-id>
+   b. Switch to main, pull latest
+   c. Attempt merge: git merge epic/<epic-id> --no-ff
+   d. If conflicts: prompt user (resolve or abort)
+   e. Push main to origin
 
-8. DONE
+8. CLEANUP
+   a. Delete local epic branch: git branch -d epic/<epic-id>
+   b. Delete remote epic branch: git push origin --delete epic/<epic-id>
+   c. Prune worktrees: git worktree prune
+   d. Verify no orphan agent branches
+
+9. DONE
    Clean history with one commit per task,
    one merge commit per epic
 ```

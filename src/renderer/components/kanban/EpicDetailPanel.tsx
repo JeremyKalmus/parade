@@ -4,7 +4,7 @@ import { Card } from '@renderer/components/ui/card';
 import { Badge } from '@renderer/components/ui/badge';
 import { Progress } from '@renderer/components/ui/progress';
 import { StatusIcons } from '@renderer/lib/iconMap';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, GitBranch } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const STATUS_CONFIG: Record<IssueStatus, { icon: LucideIcon; color: string; bgColor: string; label: string }> = {
@@ -69,7 +69,7 @@ function ChildTaskItem({ task }: { task: Issue }) {
 }
 
 export function EpicDetailPanel() {
-  const { selectedEpic, childTasks, isLoadingChildren, clearSelection } = useBeadsStore();
+  const { selectedEpic, childTasks, isLoadingChildren, clearSelection, getEpicWorktree } = useBeadsStore();
 
   if (!selectedEpic) {
     return (
@@ -84,6 +84,9 @@ export function EpicDetailPanel() {
   const completedCount = childTasks.filter((t) => t.status === 'closed').length;
   const totalCount = childTasks.length;
   const statusConfig = STATUS_CONFIG[selectedEpic.status] || STATUS_CONFIG.open;
+
+  // Get worktree info for this epic (only for epics, not tasks)
+  const worktree = !isTask ? getEpicWorktree(selectedEpic.id) : null;
 
   return (
     <div className="p-4 space-y-4 overflow-y-auto h-full bg-slate-950">
@@ -127,6 +130,31 @@ export function EpicDetailPanel() {
               </Badge>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Development - only for epics */}
+      {!isTask && (
+        <section>
+          <h3 className="font-medium text-slate-200 mb-2 flex items-center gap-2">
+            <GitBranch className="w-4 h-4" />
+            Development
+          </h3>
+          <Card className="p-3 bg-slate-800/50 border-slate-700">
+            {worktree ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-300 font-mono">{worktree.branch}</span>
+                  <Badge variant="secondary" className="text-xs bg-green-900/30 text-green-400">
+                    active
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500">{worktree.path}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">No branch yet</p>
+            )}
+          </Card>
         </section>
       )}
 

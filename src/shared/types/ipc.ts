@@ -1,6 +1,6 @@
 // IPC channel definitions and message types
 
-import type { Issue, BeadId, CreateIssueParams, UpdateIssueParams, ListFilters, Dependency } from './beads';
+import type { Issue, BeadId, CreateIssueParams, UpdateIssueParams, ListFilters, Dependency, Worktree } from './beads';
 import type {
   Brief,
   BriefFilters,
@@ -59,6 +59,7 @@ export const IPC_CHANNELS = {
   BEADS_DEP_REMOVE: 'beads:dep:remove',
   BEADS_DEP_TREE: 'beads:dep:tree',
   BEADS_GET_ALL_WITH_DEPS: 'beads:get-all-with-deps',
+  BEADS_WORKTREE_LIST: 'beads:worktree-list',
 
   // Discovery operations
   DISCOVERY: {
@@ -194,6 +195,11 @@ export interface BeadsDepAddRequest {
 export interface BeadsDepTreeRequest {
   id: BeadId;
   direction?: 'up' | 'down' | 'both';
+}
+
+export interface BeadsWorktreeListResponse {
+  worktrees: Worktree[];
+  error?: string;
 }
 
 // Dialog types
@@ -354,6 +360,7 @@ export interface ElectronAPI {
     depRemove: (from: BeadId, to: BeadId) => Promise<BeadsUpdateResponse>;
     depTree: (id: BeadId, direction?: 'up' | 'down' | 'both') => Promise<{ tree: any; error?: string }>;
     getAllWithDependencies: () => Promise<{ issues: (Issue & { dependencies?: Issue[]; parent?: string })[]; error?: string }>;
+    worktreeList: () => Promise<BeadsWorktreeListResponse>;
   };
   discovery: {
     listBriefs: (filters?: BriefFilters) => Promise<Brief[]>;

@@ -1,7 +1,7 @@
 // Zustand store for beads data with multi-project support
 
 import { create } from 'zustand';
-import type { Issue, BeadId, ListFilters, IssueStatus } from '../../shared/types/beads';
+import type { Issue, BeadId, ListFilters, IssueStatus, Worktree } from '../../shared/types/beads';
 import type { Project, Settings } from '../../shared/types/settings';
 import { beads, settings } from '../lib/beadsClient';
 import { computeBatches, type Batch, type TaskWithDeps } from '../lib/batchComputation';
@@ -26,8 +26,15 @@ interface BeadsState {
   collapsedBatches: Set<number>;
   isLoadingBatches: boolean;
 
+  // Worktree state
+  worktrees: Worktree[];
+  isLoadingWorktrees: boolean;
+
   // Filters
   filters: ListFilters;
+
+  // Track recent updates to prevent race conditions
+  recentUpdates: Map<BeadId, number>;
 
   // Project Actions
   loadProjects: () => Promise<void>;
@@ -50,6 +57,10 @@ interface BeadsState {
   toggleBatchCollapse: (batchNumber: number) => void;
   loadCollapsedBatches: () => void;
   saveCollapsedBatches: () => void;
+
+  // Worktree Actions
+  fetchWorktrees: (options?: { silent?: boolean }) => Promise<void>;
+  getEpicWorktree: (epicId: BeadId) => Worktree | null;
 
   // Event subscription
   subscribeToChanges: () => () => void; // Returns unsubscribe function
@@ -78,7 +89,13 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
   collapsedBatches: new Set<number>(),
   isLoadingBatches: false,
 
+  // Initial state - Worktree
+  worktrees: [],
+  isLoadingWorktrees: false,
+
   filters: {},
+
+  recentUpdates: new Map<BeadId, number>(),
 
   // Project Actions
   loadProjects: async () => {
@@ -159,7 +176,7 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
 
   // Issue Actions
   fetchIssues: async (options?: { silent?: boolean }) => {
-    const { activeProjectId, projects } = get();
+    const { activeProjectId, projects, recentUpdates } = get();
     const silent = options?.silent ?? false;
 
     // If no active project is selected, don't fetch
@@ -186,8 +203,58 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
       set({ isLoading: true, error: null });
     }
     try {
-      const issues = await beads.list(get().filters);
-      set({ issues, isLoading: false });
+      const fetchedIssues = await beads.list(get().filters);
+      
+      // Preserve optimistic updates for issues we recently updated (within last 2 seconds)
+      // This prevents race conditions where file watcher triggers before our update completes
+      const now = Date.now();
+      const RECENT_UPDATE_THRESHOLD = 2000; // 2 seconds
+      const currentIssues = get().issues;
+      
+      const mergedIssues = fetchedIssues.map((fetchedIssue) => {
+        const recentUpdateTime = recentUpdates.get(fetchedIssue.id);
+        if (recentUpdateTime && (now - recentUpdateTime) < RECENT_UPDATE_THRESHOLD) {
+          // We recently updated this issue - preserve the optimistic update
+          const optimisticIssue = currentIssues.find((i) => i.id === fetchedIssue.id);
+          if (optimisticIssue) {
+            // Merge: use fetched data but preserve status from optimistic update
+            return {
+              ...fetchedIssue,
+              status: optimisticIssue.status,
+            };
+          }
+        }
+        return fetchedIssue;
+      });
+      
+      // Clean up old recent updates (older than threshold)
+      const cleanedUpdates = new Map<BeadId, number>();
+      for (const [id, timestamp] of recentUpdates.entries()) {
+        if (now - timestamp < RECENT_UPDATE_THRESHOLD) {
+          cleanedUpdates.set(id, timestamp);
+        }
+      }
+      
+      // If we have a selected epic/task, refresh its reference to point to the updated object
+      // This prevents stale references that could cause the sidebar to close unexpectedly
+      const { selectedEpic } = get();
+      let updatedSelectedEpic = selectedEpic;
+      if (selectedEpic) {
+        const updatedIssue = mergedIssues.find((i) => i.id === selectedEpic.id);
+        if (updatedIssue) {
+          updatedSelectedEpic = updatedIssue;
+        } else {
+          // Selected issue no longer exists - clear selection
+          updatedSelectedEpic = null;
+        }
+      }
+      
+      set({ 
+        issues: mergedIssues, 
+        isLoading: false,
+        selectedEpic: updatedSelectedEpic,
+        recentUpdates: cleanedUpdates,
+      });
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Failed to fetch issues',
@@ -260,28 +327,35 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
     const previousIssue = get().issues.find((i) => i.id === id);
     const previousStatus = previousIssue?.status;
 
-    // Optimistic update - update UI immediately before API call
-    set((state) => ({
-      issues: state.issues.map((issue) =>
-        issue.id === id ? { ...issue, status } : issue
-      ),
-    }));
+    // Track this update to prevent race conditions with file watcher
+    const now = Date.now();
+    set((state) => {
+      const newRecentUpdates = new Map(state.recentUpdates);
+      newRecentUpdates.set(id, now);
+      return {
+        issues: state.issues.map((issue) =>
+          issue.id === id ? { ...issue, status } : issue
+        ),
+        recentUpdates: newRecentUpdates,
+      };
+    });
 
     try {
       await beads.update(id, { status });
       // Success - state already reflects the change
+      // Keep the recent update timestamp for a bit longer to handle file watcher delays
     } catch (err) {
       // Rollback to previous state on failure
-      if (previousStatus) {
-        set((state) => ({
+      set((state) => {
+        const newRecentUpdates = new Map(state.recentUpdates);
+        newRecentUpdates.delete(id); // Remove from recent updates on failure
+        return {
           issues: state.issues.map((issue) =>
-            issue.id === id ? { ...issue, status: previousStatus } : issue
+            issue.id === id ? { ...issue, status: previousStatus || issue.status } : issue
           ),
-        }));
-      } else {
-        // If we don't have previous state, refresh from server
-        get().fetchIssues();
-      }
+          recentUpdates: newRecentUpdates,
+        };
+      });
       throw err;
     }
   },
@@ -343,21 +417,82 @@ export const useBeadsStore = create<BeadsState>((set, get) => ({
     }
   },
 
+  // Worktree Actions
+  fetchWorktrees: async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+
+    // Only show loading indicator for non-silent fetches
+    if (!silent) {
+      set({ isLoadingWorktrees: true });
+    }
+    try {
+      const worktrees = await beads.worktreeList();
+      set({ worktrees, isLoadingWorktrees: false });
+    } catch (err) {
+      console.error('Failed to fetch worktrees:', err);
+      set({ isLoadingWorktrees: false });
+    }
+  },
+
+  getEpicWorktree: (epicId: BeadId) => {
+    const { worktrees } = get();
+    // Match worktree.branch against pattern `epic/<epicId>` or `agent/<epicId>.*`
+    const epicBranchPattern = `epic/${epicId}`;
+    const agentBranchPattern = new RegExp(`^agent/${epicId}\\.`);
+
+    return worktrees.find((wt) =>
+      wt.branch === epicBranchPattern || agentBranchPattern.test(wt.branch)
+    ) ?? null;
+  },
+
   // Event subscription for real-time updates
   subscribeToChanges: () => {
     const unsubscribe = window.electron.events.onBeadsChange(() => {
-      // Refresh data when .beads/ files change
-      // Use silent mode to avoid showing the "switching project" overlay
-      const { fetchIssues, fetchIssuesWithDeps, computeBatchesForEpic, selectedEpic } = get();
+      try {
+        // Refresh data when .beads/ files change
+        // Use silent mode to avoid showing the "switching project" overlay
+        const { fetchIssues, fetchIssuesWithDeps, fetchWorktrees, computeBatchesForEpic, selectedEpic } = get();
 
-      fetchIssues({ silent: true });
+        // Add a small delay to avoid race conditions with file writes
+        // This gives the file system time to fully write the changes
+        setTimeout(() => {
+          fetchIssues({ silent: true }).catch((err) => {
+            console.error('Error fetching issues in real-time update:', err);
+          });
 
-      // If an epic is selected, also refresh issues with dependencies and recompute batches
-      if (selectedEpic) {
-        fetchIssuesWithDeps({ silent: true }).then(() => {
-          // Recompute batches after deps are updated
-          computeBatchesForEpic(selectedEpic.id);
-        });
+          fetchWorktrees({ silent: true }).catch((err) => {
+            console.error('Error fetching worktrees in real-time update:', err);
+          });
+
+          // If something is selected, also refresh issues with dependencies and recompute batches
+          if (selectedEpic) {
+            fetchIssuesWithDeps({ silent: true })
+              .then(() => {
+                // Determine which epic to compute batches for
+                // If selectedEpic is a task, use its parent epic
+                // If selectedEpic is an epic, use it directly
+                let epicId: BeadId | null = null;
+                
+                if (selectedEpic.issue_type === 'task' && selectedEpic.parent) {
+                  // Task selected - find its parent epic
+                  epicId = selectedEpic.parent;
+                } else if (selectedEpic.issue_type === 'epic') {
+                  // Epic selected - use it directly
+                  epicId = selectedEpic.id;
+                }
+
+                // Only compute batches if we have a valid epic ID
+                if (epicId) {
+                  computeBatchesForEpic(epicId);
+                }
+              })
+              .catch((err) => {
+                console.error('Error fetching issues with deps in real-time update:', err);
+              });
+          }
+        }, 100); // 100ms delay to let file writes complete
+      } catch (err) {
+        console.error('Error in beads change handler:', err);
       }
     });
     return unsubscribe;

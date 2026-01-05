@@ -7,6 +7,7 @@ import type {
   UpdateIssueParams,
   ListFilters,
   Dependency,
+  Worktree,
 } from '../../shared/types/beads';
 
 // Re-export the electron API with proper typing
@@ -110,6 +111,14 @@ export const beads = {
         blockedBy,
       };
     });
+  },
+
+  async worktreeList(): Promise<Worktree[]> {
+    const result = await window.electron.beads.worktreeList();
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    return result.worktrees;
   },
 };
 

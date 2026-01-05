@@ -89,6 +89,68 @@ npm run build              # Build verification
 - [ ] Remove unused dependencies from package.json
 - [ ] No console.log statements left in production code
 
+### 7. Git Merge & Cleanup
+
+**Auto-Merge Epic Branch:**
+
+```bash
+# Ensure epic branch is up to date
+git checkout epic/<epic-id>
+git pull origin epic/<epic-id>
+
+# Switch to main and pull latest
+git checkout main
+git pull origin main
+
+# Merge with --no-ff for visibility in history
+git merge epic/<epic-id> --no-ff -m "Merge epic/<epic-id>: <epic title>
+
+Completed tasks:
+- <task-id>: <title>
+- <task-id>: <title>
+
+Closes: <epic-id>"
+```
+
+**Conflict Resolution:**
+
+If merge conflicts occur:
+1. List conflicting files: `git diff --name-only --diff-filter=U`
+2. Display conflict details to user
+3. Options:
+   - [ ] User resolves manually, then continue merge
+   - [ ] Abort merge and keep epic branch open: `git merge --abort`
+
+```bash
+# After user resolves conflicts
+git add .
+git commit -m "Merge epic/<epic-id>: <epic title> (resolved conflicts)"
+```
+
+**Push & Cleanup:**
+
+```bash
+# Push merged main to remote
+git push origin main
+
+# Delete epic branch locally
+git branch -d epic/<epic-id>
+
+# Delete epic branch remotely
+git push origin --delete epic/<epic-id>
+
+# Prune any remaining worktrees
+git worktree prune
+```
+
+**Checklist:**
+- [ ] Epic branch merged to main with `--no-ff`
+- [ ] All conflicts resolved (if any)
+- [ ] Changes pushed to origin
+- [ ] Epic branch deleted locally
+- [ ] Epic branch deleted from remote
+- [ ] Worktrees cleaned up
+
 ---
 
 ## Conditional Checks
@@ -129,6 +191,7 @@ npm run build              # Build verification
 4. Patterns extracted and documented
 5. No integration regressions
 6. Cleanup completed
+7. Epic branch merged to main and cleaned up
 
 **Report Format:**
 ```

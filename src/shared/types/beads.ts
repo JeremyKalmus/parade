@@ -81,3 +81,11 @@ export interface DepTreeNode {
   children: DepTreeNode[];
   blockedBy: BeadId[];
 }
+
+export interface Worktree {
+  name: string;
+  path: string;
+  branch: string;
+  is_main: boolean;
+  beads_state: 'primary' | 'shared' | 'redirect';
+}

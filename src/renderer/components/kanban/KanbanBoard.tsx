@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { KanbanFilters } from './KanbanFilters';
 import { BatchGrid } from './BatchGrid';
+import { EpicInfoHeader } from './EpicInfoHeader';
 import { useBeadsStore } from '../../store/beadsStore';
 import type { Issue, BeadId } from '../../../shared/types/beads';
 import { Layers } from 'lucide-react';
@@ -87,20 +88,29 @@ export function KanbanBoard() {
         store.fetchIssuesWithDeps().then(() => {
           store.computeBatchesForEpic(filters.epicId!);
         });
+
+        // Only auto-select the epic if no task is currently selected
+        // This prevents resetting task selection when issues update
+        const currentSelection = store.selectedEpic;
+        const isTaskSelected = currentSelection?.issue_type === 'task';
+        
+        if (!isTaskSelected) {
+          // Get fresh issues from store to find the epic
+          const currentIssues = store.issues;
+          const epic = currentIssues.find((i) => i.id === filters.epicId);
+          if (epic && epic.id !== currentSelection?.id) {
+            store.selectEpic(epic);
+          }
+        }
       } else {
         // Just a background refresh of issues - recompute batches silently
+        // Don't change selection on background refreshes to prevent flickering
         store.computeBatchesForEpic(filters.epicId);
-      }
-
-      // Set the epic as selected for the sidebar
-      const epic = issues.find((i) => i.id === filters.epicId);
-      if (epic && epic.id !== selectedEpic?.id) {
-        store.selectEpic(epic);
       }
     } else {
       prevEpicIdRef.current = null;
     }
-  }, [filters.epicId, issues]);
+  }, [filters.epicId]); // Removed 'issues' dependency to prevent flickering on real-time updates
 
   // Handle card click - select the task to show details
   const handleCardClick = useCallback((issue: Issue) => {
@@ -186,15 +196,18 @@ export function KanbanBoard() {
       {/* Board content */}
       <div className="flex-1 overflow-hidden">
         {filters.epicId ? (
-          // Batch swimlane view
-          <BatchGrid
-            batches={batches}
-            collapsedBatches={collapsedBatches}
-            onToggleBatch={handleToggleBatch}
-            onCardClick={handleCardClick}
-            selectedTaskId={selectedEpic?.id}
-            isLoading={isLoadingBatches}
-          />
+          // Batch swimlane view with epic header
+          <>
+            <EpicInfoHeader epicId={filters.epicId} />
+            <BatchGrid
+              batches={batches}
+              collapsedBatches={collapsedBatches}
+              onToggleBatch={handleToggleBatch}
+              onCardClick={handleCardClick}
+              selectedTaskId={selectedEpic?.id}
+              isLoading={isLoadingBatches}
+            />
+          </>
         ) : (
           // No epic selected - prompt to select one
           <div className="h-full flex items-center justify-center">

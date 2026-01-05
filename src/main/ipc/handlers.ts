@@ -94,6 +94,11 @@ export function registerIpcHandlers() {
     return beadsService.getAllWithDependencies();
   });
 
+  // Beads: List worktrees
+  ipcMain.handle(IPC_CHANNELS.BEADS_WORKTREE_LIST, async () => {
+    return beadsService.worktreeList();
+  });
+
   // Settings: Get
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GET, async (_event, key: string) => {
     if (key === 'all') {

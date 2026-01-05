@@ -1,13 +1,21 @@
-const { notarize } = require('@electron/notarize');
+// Notarization disabled - takes too long in CI and is flaky
+// Users can run: xattr -cr /Applications/Parade.app
+// To re-enable, set ENABLE_NOTARIZATION=true in GitHub secrets
 
 exports.default = async function notarizing(context) {
+  if (process.env.ENABLE_NOTARIZATION !== 'true') {
+    console.log('Notarization skipped (ENABLE_NOTARIZATION not set)');
+    console.log('Users should run: xattr -cr /Applications/Parade.app');
+    return;
+  }
+
+  const { notarize } = require('@electron/notarize');
   const { electronPlatformName, appOutDir } = context;
 
   if (electronPlatformName !== 'darwin') {
     return;
   }
 
-  // Skip if not in CI or missing credentials
   if (!process.env.APPLE_ID || !process.env.APPLE_APP_SPECIFIC_PASSWORD || !process.env.APPLE_TEAM_ID) {
     console.log('Skipping notarization: missing credentials');
     return;

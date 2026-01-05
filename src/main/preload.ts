@@ -39,6 +39,8 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.BEADS_DEP_TREE, id, direction),
     getAllWithDependencies: () =>
       ipcRenderer.invoke(IPC_CHANNELS.BEADS_GET_ALL_WITH_DEPS),
+    worktreeList: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.BEADS_WORKTREE_LIST),
   },
   discovery: {
     listBriefs: (filters?: BriefFilters) =>
